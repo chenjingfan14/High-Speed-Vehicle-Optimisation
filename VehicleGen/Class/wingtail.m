@@ -153,7 +153,7 @@ classdef wingtail
             obj.Boolean = boolean;
             
             %%
-            % plotter(obj.Points);
+%             plotter(obj.Points);
         end
     end
     

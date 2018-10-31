@@ -1,10 +1,8 @@
 clear all
 clc
 
-AoA = -4:2:32;
-
 l = 0.508;
-% l = 10;
+l = 10;
 
 xPanels = 50;
 disc = 3;
@@ -39,9 +37,9 @@ end
 load('nosebodyexperimental')
 load('thetaBetaCurves.mat');
 
-which = 4;
-dim = length(which);
+experimentalData = experimentalData(1);
 
+dim = length(experimentalData);
 Aref = zeros(dim,1);
 
 numericalCp = cell(dim,1);
@@ -53,8 +51,7 @@ numericalCm = cell(dim,1);
 numericalImpact = cell(dim,1);
 numericalShadow = cell(dim,1);
 
-count = 1;
-for Case = which
+for Case = dim:-1:1
     
     con = x/l <= 0.45;
     con2 = x/l >= 0.45;
@@ -141,7 +138,7 @@ for Case = which
     config(1).x = xp;
     config(1).y = y;
     config(1).z = z;
-        
+    
     config(2).Name = "aftbody";
     config(2).x = xp2;
     config(2).y = y2;
@@ -156,24 +153,23 @@ for Case = which
         cellprop{i}.Points = config(i);
     end
     
-    Aref(count) = pi*max(part)^2;
+    Aref(Case) = pi*max(part)^2;
     
     plotter(config) 
     
-    configCell(count,:) = cellprop;
-    
-    count = count + 1;
+    configCell(Case,:) = cellprop;
     
     clear config cellprop
     
 end
 
 % Can put in parallel
-for Case = dim:-1:1
+for Case = 1:dim
     
     MAC = 0;
     
-    expData = experimentalData{which(Case)};
+    expData = experimentalData{Case};
+    AoA = -4:0.5:32;
     flow = flowparameters(AoA);
     Mrange = [1:0.0001:10,10.1:0.1:100];
     PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
@@ -204,7 +200,7 @@ for Case = dim:-1:1
 end
 
 for i = dim:-1:1
-    expData = experimentalData{Case(i)};
+    expData = experimentalData{i};
     
     CN = numericalCN{i};
     CA = numericalCA{i};

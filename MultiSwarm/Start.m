@@ -4,10 +4,11 @@ close all
 clc
 
 options = simOptions();
+Bezier = options.Bezier;
 
 % Swarm size (must be divisible by 3 for mutation subsets in MOPSO)
-nPop = 300;
-maxIt = 2000; % Maximum number of iterations
+nPop = 60;
+maxIt = 3; % Maximum number of iterations
 
 w = 0.3; % Intertia coeff
 c1 = 1.49; % Personal acceleration coeff
@@ -27,7 +28,37 @@ fi = maxIt; % Display Pareto Front evey fi iterations
 % Number of wing partitions
 n = 3;
 
-variCons = {"Variables",    "Num Of",   "Conditions"    'Transformations';...
+if Bezier
+    minSec = [1, 0.7, 0.5, 0.3, 0.1, 0, 0,  1, 0.7, 0.5, 0.3, 0.1, 0, 0,  0, 0.015, 0.02, 0.05, 0.02, 0.05, 0,  0, -0.035, -0.04, -0.07, -0.04, -0.05, 0];
+    maxSec = [1, 0.9, 0.7, 0.5, 0.3, 0, 0,  1, 0.9, 0.7, 0.5, 0.3, 0, 0,  0, 0.035, 0.04, 0.07, 0.04, 0.05, 0,  0, -0.015, -0.02, -0.05, -0.02, -0.05, 0];
+    
+    foilData = length(minSec);
+    
+    variCons = {"Variables",    "Num Of",   "Conditions"    'Transformations';...
+    "Dihedral",             "~",            "~",            '~';...
+    "Chord",                n+1,            "< Previous",   '.*AftLength';...
+    "LESweep",              n,              "~"             '~';...
+    "Semispan",             n,              "Minimum 0.5",  '~';...            
+    "Bezier",               foilData*(n+1), "~",            '~';...
+    "xOffset",              "~",            "~",            '.*AftLength';...
+    "zOffset",              "~",            "~"             '.*AftHeight/2';...
+    "UpperLength",          "~",            "~",            '~';...
+    "yUpperRad",            "~",            "~",            '~';...
+    "yBotRatio",            "~",            "~",            '~';...
+    "zUpperRad",            "~",            "~",            '~';...
+    "SideLength",           "~",            "~",            '~';...
+    "zLowerRad",            "~",            "~",            '~';...
+    "AftLength",            "~",            "~",            '~';...
+    "NoseRad",              "~",            "~",            '~';...
+    "NoseLength",           "~",            "~",            '.*NoseRad';...
+    "zNoseOffset",          "~",            "~",            '.*AftHeight/2';...
+    "ForeLength",           "~",            "~",            '~'};
+
+else
+    minSec = 1;
+    maxSec = 33;
+    
+    variCons = {"Variables",    "Num Of",   "Conditions"    'Transformations';...
     "Dihedral",             "~",        "~",            '~';...
     "Chord",                n+1,        "< Previous",   '.*AftLength';...
     "LESweep",              n,          "~"             '~';...
@@ -46,9 +77,15 @@ variCons = {"Variables",    "Num Of",   "Conditions"    'Transformations';...
     "NoseLength",           "~",        "~",            '.*NoseRad';...
     "zNoseOffset",          "~",        "~",            '.*AftHeight/2';...
     "ForeLength",           "~",        "~",            '~'};
-% Streamlines above cell to indices instead of names
-% Total number of variables
-[cond,varArray,nVar] = translate(variCons);
+    
+    % Load coordinates of 2D aerofoil sections into matrices within cell & 
+    % freestream flow parameters into structure
+    foilData = getaerofoilsecdata();
+
+end
+    
+minSec = repmat(minSec,1,n+1);
+maxSec = repmat(maxSec,1,n+1);
 
 % Minimum and maximum variable values. Corresponds to variCons
 %% Full Configuration (Wing & Body)
@@ -58,10 +95,10 @@ variCons = {"Variables",    "Num Of",   "Conditions"    'Transformations';...
 %     1,1,1, 1,1,1, 10, 0.5,1,0, 5];
 
 %% Wing Only
-% varMin = [0, 0.5,0.1,0.1,0.1, 0,0,0, 2,0,0, 1,1,1,1, 0,-0.5,... % Wing
-%     NaN,NaN,NaN, NaN,NaN,NaN, NaN, NaN,NaN,NaN, NaN]; % Body
-% varMax = [20, 1,1,1,1, 45,45,45, 5,2,2, 33,33,33,33, 0.5,0,...
-%     NaN,NaN,NaN, NaN,NaN,NaN, NaN, NaN,NaN,NaN, NaN];
+varMin = [0, 0.5,0.1,0.1,0.1, 0,0,0, 2,0,0, minSec, 0,-0.5,... % Wing
+    NaN,NaN,NaN, NaN,NaN,NaN, NaN, NaN,NaN,NaN, NaN]; % Body
+varMax = [20, 1,1,1,1, 45,45,45, 5,2,2, maxSec, 0.5,0,...
+    NaN,NaN,NaN, NaN,NaN,NaN, NaN, NaN,NaN,NaN, NaN];
 
 %% Body Only
 % varMin = [NaN, NaN,NaN,NaN,NaN, NaN,NaN,NaN, NaN,NaN,NaN, NaN,NaN,NaN,NaN, NaN,NaN,... % Wing
@@ -69,18 +106,19 @@ variCons = {"Variables",    "Num Of",   "Conditions"    'Transformations';...
 % varMax = [NaN, NaN,NaN,NaN,NaN, NaN,NaN,NaN, NaN,NaN,NaN, NaN,NaN,NaN,NaN, NaN,NaN,...
 %     1,1,1, 1,1,1, 10, 0.5,1,0, 5];
 
+
+% Streamlines above cell to indices instead of names
+% Total number of variables
+[cond,varArray,nVar] = translate(variCons);
+
 %%
 if exist('varMin','var')
     standard = isnan(varMin);
-    [varMin,varMax] = standardvariables(standard,n,varMin,varMax);
+    [varMin,varMax] = standardvariables(standard,n,Bezier,varMin,varMax);
 else
     standard = true(1,nVar);
-    [varMin,varMax] = standardvariables(standard,n);
+    [varMin,varMax] = standardvariables(standard,n,Bezier);
 end
-
-% Load coordinates of 2D aerofoil sections into matrices within cell & 
-% freestream flow parameters into structure
-foilData = getaerofoilsecdata();
 
 % Call flowparameters() to apply pre-defined angle attack/Mach numbers
 % Call flowparameters(10,3) for example to run configurations at angle of
@@ -88,6 +126,31 @@ foilData = getaerofoilsecdata();
 % flowparameters([0,2,4,6],[3,4]). See inside function for predetermined
 % figures
 flow = flowparameters();
+
+%% Test Configurations - Comment out when running simulations
+% varTest = [0, 0.5,0.1,0.1,0.1, 0,0,0, 2,0,0, 1,1,1,1, 0,-0.5,... % Wing
+%     NaN,NaN,NaN, NaN,NaN,NaN, NaN, NaN,NaN,NaN, NaN]; % Body
+% 
+% standard = isnan(varTest);
+% [varTest,~] = standardvariables(standard,n,Bezier,varTest,varTest);
+% 
+% [partArrays,sectionArray] = partIndexing(cond,varArray);
+% 
+% [~,physicalPos] = conditioning(varTest,cond,varArray);
+% 
+% if Bezier
+%     sections = Bezier3(physicalPos(:,sectionArray),n,foilData,nPop);
+% else
+%     % Assign 2D section matrices to particles. Foils variable = section indices
+%     sections = foilData(physicalPos(:,sectionArray));
+% end
+% 
+% particlecreator(varTest,partArrays,sections)
+% viewcaller(varTest,cond,varArray,foilData,n,flow,options);
+% 
+% return
+
+%%
 
 % Load lookup tables for shock-expansion and Prandtl Meyer expansion
 load('thetaBetaCurves.mat');
@@ -108,16 +171,16 @@ if nFun == 1
     % Max stall values before simulation ends
     maxStall = 500;
     
-    [GlobalBestFit,GlobalBestPos] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    [GlobalBestFit,GlobalBestPos] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 else
     
     inv = false(1,nFun);
     inv = logical(inv);
     maxPF = nPop; % Maximum number of Pareto Front values
     mutProb = 1/nVar; % Probability of mutation
-
-    [GlobalBestFit,GlobalBestPos] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    
+    [GlobalBestFit,GlobalBestPos] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 end
 
 % Use this function to create output plots of configurations
-viewcaller(GlobalBestPos,cond,varArray,foilData,flow);
+viewcaller(GlobalBestPos,cond,varArray,foilData,n,flow,options);

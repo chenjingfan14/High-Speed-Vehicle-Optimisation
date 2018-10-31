@@ -1,4 +1,4 @@
-function [varMin,varMax] = standardvariables(con,n,varMin,varMax)
+function [varMin,varMax] = standardvariables(con,n,Bezier,varMin,varMax)
 %% Standardised variables to be held constant during optimisation
 
 % variCons = {"Variables",    "Num Of",   "Conditions"    'Transformations';...
@@ -24,11 +24,21 @@ function [varMin,varMax] = standardvariables(con,n,varMin,varMax)
 stanChord = repmat(0.8,1,n+1);
 stanLESweep = repmat(40,1,n);
 stanSemispan = [2, repmat(1,1,n-1)];
-stanSection = repmat(2,1,n+1);
+
+if Bezier
+    stanSection = [1, 0.9, 0.7, 0.5, 0.3, 0,  0, 1, 0.9, 0.7, 0.5, 0.3, 0, 0,  0, 0.035, 0.04, 0.07, 0.04, 0.05, 0,  0, -0.015, -0.02, -0.05, -0.02, -0.05, 0];
+else
+    stanSection = 1;
+end
+
+stanSection = repmat(stanSection,1,n+1);
 
 % As above
 standardVar = [0, stanChord, stanLESweep, stanSemispan, stanSection, 0,0,... % Wing
     0,1,1, 1,0,1, 8, 0.25,0.25,0, 4]; % Body
 
 varMin(con) = standardVar(con);
+
+if nargin > 3
 varMax(con) = standardVar(con);
+end

@@ -23,7 +23,7 @@ for i = 1:dim
     % partNum = counters(up);
     
     switch name
-        case {"Dihedral","Chord","LESweep","Semispan","Section","xOffset","zOffset"}
+        case {"Dihedral","Chord","LESweep","Semispan","Bezier","Section","xOffset","zOffset"}
             
             if ~wing
                 j = j + 1;
@@ -35,7 +35,7 @@ for i = 1:dim
             partArrays{wing,2} = [partArrays{wing,2} repmat(name,n)];
             partArrays{wing,3} = [partArrays{wing,3} array];
             
-            if name == "Section"
+            if name == "Section" || name == "Bezier"
                 sectionArray = array;
             end
             

@@ -1,6 +1,8 @@
 clear all
 clc
 
+options = simOptions();
+
 l = 1.764*0.174;
 r1 = 0.175*0.174;
 
@@ -55,9 +57,10 @@ Properties(2).Points = config(2);
 cellprop{1} = Properties(1);
 cellprop{2} = Properties(2);
 
-flow = flowparameters;
+flow = flowparameters(-4:30);
 load('thetaBetaCurves.mat');
-load('PrandtlMeyerExpansion.mat');
+Mrange = [1:0.0001:10,10.1:0.1:100];
+PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
 
 Aref = pi*max(part2)^2;
 
@@ -65,4 +68,4 @@ costFun = @aeroprediction;
 
 plotter(config)
 
-result = feval(costFun,cellprop,flow,Aref,0,thetaBetaM,maxThetaBetaM,PrandtlMeyer);
+result = feval(costFun,cellprop,flow,Aref,0,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
