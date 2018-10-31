@@ -3,6 +3,9 @@ function [points,numParts,bodyPart,impactMethod,shadowMethod] = flowfinder(prope
 % Defines which prediction method to be used for each part and
 % impact/shadow flow
 
+% Ensure no cells are empty, if so delete them
+properties = properties(~cellfun('isempty',properties));
+
 dim = length(properties);
 
 bodyPart = true(dim,1);
@@ -37,6 +40,12 @@ for i=1:dim
             
             impactMethod(i) = 2;
             shadowMethod(i) = 2;
+            
+        case "test"
+            
+            impactMethod(i) = 3;
+            shadowMethod(i) = 2;
+            
     end 
 end
     

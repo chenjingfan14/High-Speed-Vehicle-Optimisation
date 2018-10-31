@@ -5,11 +5,10 @@ function plotmethodsdata(AoA,methodCN,methodCA,~,~,methodCm,impactMatrix,~,expDa
 nums = (1:rows)';
 
 labels = cellstr(num2str(nums));
-xLim = [AoA(1)-0.5 AoA(end)+0.5]; 
+xLim = [AoA(1)-0.5 AoA(end)+ 
 
 figure
-positionVector = [0.35 0.6, 0.35, 0.35];
-subplot('Position',positionVector)
+subplot(2,2,1)
 hold on
 grid on
 plot(expData(:,1),expData(:,2),'ko')
@@ -20,10 +19,10 @@ for i = 1:rows
 end
 xlabel(['Angle of Attack (' char(176) ')'])
 ylabel('C_N')
-xlim(xLim);
+xlim(AoA([1 end]));
 hold off
 
-subplot(2,2,3)
+subplot(2,2,2)
 % figure
 hold on
 grid on
@@ -35,10 +34,11 @@ for i = 1:rows
 end
 xlabel(['Angle of Attack (' char(176) ')'])
 ylabel('C_A')
-xlim(xLim);
+xlim(AoA([1 end]));
 hold off
 
-subplot(2,2,4)
+positionVector = [0.35 0.1, 0.35, 0.35];
+subplot('Position',positionVector)
 % subplot(2,2,3)
 % figure
 hold on
@@ -51,7 +51,7 @@ for i = 1:rows
 end
 xlabel(['Angle of Attack (' char(176) ')'])
 ylabel('C_m')
-xlim(xLim);
+xlim(AoA([1 end]));
 hold off
 
 % figure

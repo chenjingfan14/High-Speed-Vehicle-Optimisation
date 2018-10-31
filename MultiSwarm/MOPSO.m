@@ -1,4 +1,4 @@
-function [nonDomFit,nonDomPos] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
+function [nonDomFit,nonDomPos] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
 %% Multi Objective Particle Swarm Optimiser
 % Main program, initialises swarm based on minimum/maximum design variables
 % Uses cost function values to update swarm positions throughout process
@@ -30,12 +30,18 @@ parVel = zeros(varSize);
 
 %% Only initialisation part dependent on problem
 % Impose conditions on particles
+Bezier = options.Bezier;
+
 [partArrays,sectionArray] = partIndexing(cond,varArray);
 
 [parPos,physicalPos] = conditioning(parPos,cond,varArray);
 
-% Assign 2D section matrices to particles. Foils variable = section indices
-sections = foilData(physicalPos(:,sectionArray));
+if Bezier
+    sections = Bezier3(physicalPos(:,sectionArray),n,foilData,nPop);
+else
+    % Assign 2D section matrices to particles. Foils variable = section indices
+    sections = foilData(physicalPos(:,sectionArray));
+end
 
 % Calculate initial fitness functions
 [parFit,successCount] = costcaller(costFun,nPop,nFun,physicalPos,partArrays,sections,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
@@ -161,10 +167,15 @@ for it = 2:maxIt+1
     %% Only optimisation part dependent on problem
     % Impose conditions
     [parPos,phyiscalPos] = conditioning(parPos,cond,varArray);
-    sectionPos = phyiscalPos(:,sectionArray);
-    zero = sectionPos == 0;
-    sectionPos(zero) = 1;
-    sections = foilData(sectionPos);
+    
+    if Bezier
+        sections = Bezier3(physicalPos(:,sectionArray),n,foilData,nPop);
+    else
+        sectionPos = phyiscalPos(:,sectionArray);
+        zero = sectionPos == 0;
+        sectionPos(zero) = 1;
+        sections = foilData(sectionPos);
+    end
     
     % Calculate fitness functions
     [parFit,successCount] = costcaller(costFun,nPop,nFun,phyiscalPos,partArrays,sections,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);

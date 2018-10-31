@@ -353,8 +353,6 @@ for i=1:runs
     copx(i) = cop(1);
     copCell{i} = cop;
     
-%     plotter(rotPoints,"impact")
-    
 end
 
 %% Translate aerodynamic characteristics to cost function values
@@ -384,8 +382,7 @@ if any(numFoils)
     infCon = cost < 0;
     
     cost(infCon) = inf;
-else
-    cost = [];
+    
 end
 
 aerodynamics.Cl = Cl;
@@ -393,6 +390,7 @@ aerodynamics.Cd = Cd;
 aerodynamics.Cm = Cm;
 aerodynamics.CN = CN;
 aerodynamics.CA = CA;
+aerodynamics.rootMoment = rootMomemt;
 aerodynamics.CoP = copCell;
 
 %% To view created configuration, uncomment this
@@ -420,54 +418,54 @@ aerodynamics.CoP = copCell;
 %% Plot Data: Leave commented when running optimisations
 % Plot Cl, Cl etc against angle of attack for all flight states
 
-% for i = size(MinfMat,2):-1:1
-%     legStr{i} = ['Mach: ' num2str(MinfMat(1,i))];
-% end
-% 
-% figure
-% hold on
-% grid on
-% plot(alphaMat,CN)
-% xlabel('Angle of Attack')
-% ylabel('C_N')
-% legend(legStr)
-% hold off
-% 
-% figure
-% hold on
-% grid on
-% plot(alphaMat,CA)
-% xlabel('Angle of Attack')
-% ylabel('C_A')
-% legend(legStr)
-% hold off
-% 
-% figure
-% hold on
-% grid on
-% plot(alphaMat,Cm)
-% xlabel('Angle of Attack')
-% ylabel('C_m')
-% legend(legStr)
-% hold off
-% 
-% figure
-% hold on
-% grid on
-% plot(alphaMat,Cl)
-% xlabel('Angle of Attack')
-% ylabel('C_L')
-% legend(legStr)
-% hold off
-% 
-% figure
-% hold on
-% grid on
-% plot(alphaMat,Cd)
-% xlabel('Angle of Attack')
-% ylabel('C_D')
-% legend(legStr)
-% hold off
+for i = size(MinfMat,2):-1:1
+    legStr{i} = ['Mach: ' num2str(MinfMat(1,i))];
+end
+
+figure
+hold on
+grid on
+plot(alphaMat,CN)
+xlabel('Angle of Attack')
+ylabel('C_N')
+legend(legStr)
+hold off
+
+figure
+hold on
+grid on
+plot(alphaMat,CA)
+xlabel('Angle of Attack')
+ylabel('C_A')
+legend(legStr)
+hold off
+
+figure
+hold on
+grid on
+plot(alphaMat,Cm)
+xlabel('Angle of Attack')
+ylabel('C_m')
+legend(legStr)
+hold off
+
+figure
+hold on
+grid on
+plot(alphaMat,Cl)
+xlabel('Angle of Attack')
+ylabel('C_L')
+legend(legStr)
+hold off
+
+figure
+hold on
+grid on
+plot(alphaMat,Cd)
+xlabel('Angle of Attack')
+ylabel('C_D')
+legend(legStr)
+hold off
 
 % figure
 % hold on
