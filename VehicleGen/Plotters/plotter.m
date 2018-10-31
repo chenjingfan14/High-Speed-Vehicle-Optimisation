@@ -13,7 +13,7 @@ for i = 1:nCons
     end
 end
 
-h =  findobj('type','figure');
+h = findobj('type','figure');
 num = length(h)+1;
 
 num6 = ceil(num/6);
@@ -39,14 +39,29 @@ switch lowestWhole
         pos = [640, 40, 640, 440];
     case 6
         pos = [1280, 40, 640, 440];
+        
+%     case 1
+%         pos = [0, -150, 640, 440];
+%     case 3 
+%         pos = [640, -150, 640, 440];
+%     case 5
+%         pos = [1280, -150, 640, 440];
+%     case 2
+%         pos = [0, 380, 640, 440];
+%     case 4
+%         pos = [640, 380, 640, 440];
+%     case 6
+%         pos = [1280, 380, 640, 440];
+        
 end
+
 figure
 hold on
 set(gcf, 'Position', pos)
 axis equal
-xlabel('x')
-ylabel('y')
-zlabel('z')
+xlabel('x (m)')
+ylabel('y (m)')
+zlabel('z (m)')
 
 % r=[1,0,0];
 % g=[0,1,0];
