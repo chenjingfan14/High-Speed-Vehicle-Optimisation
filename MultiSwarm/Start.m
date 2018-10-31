@@ -29,8 +29,21 @@ fi = maxIt; % Display Pareto Front evey fi iterations
 n = 3;
 
 if Bezier
-    minSec = [1, 0.7, 0.5, 0.3, 0.1, 0, 0,  1, 0.7, 0.5, 0.3, 0.1, 0, 0,  0, 0.015, 0.02, 0.05, 0.02, 0.05, 0,  0, -0.035, -0.04, -0.07, -0.04, -0.05, 0];
-    maxSec = [1, 0.9, 0.7, 0.5, 0.3, 0, 0,  1, 0.9, 0.7, 0.5, 0.3, 0, 0,  0, 0.035, 0.04, 0.07, 0.04, 0.05, 0,  0, -0.015, -0.02, -0.05, -0.02, -0.05, 0];
+    
+    % Control point min/max coordinates
+    minSec = [1, 0.7, 0.5,  0.3,    0.1,    0,      0;  % xu
+        1,  0.7,    0.5,    0.3,    0.1,    0,      0;  % xl
+        0,  0.015,  0.02,   0.05,   0.02,   0.05    0;  % zu
+        0, -0.035, -0.04,  -0.07,  -0.04,  -0.05,   0]; % zl
+    
+    maxSec = [1, 0.9, 0.7,  0.5,    0.3,    0,      0;  % xu
+        1,  0.9,    0.7,    0.5,    0.3,    0,      0;  % xl
+        0,  0.035,  0.04,   0.07,   0.04,   0.05,   0;  % zu
+        0, -0.015, -0.02,  -0.05,  -0.02,  -0.05,   0]; % zl
+    
+    % Transform matrix to single array
+    minSec = reshape(minSec',1,[]);
+    maxSec = reshape(maxSec',1,[]);
     
     foilData = length(minSec);
     
@@ -83,7 +96,9 @@ else
     foilData = getaerofoilsecdata();
 
 end
-    
+
+% Replicate min/max section values for number of sections ie. number of
+% partitions+1
 minSec = repmat(minSec,1,n+1);
 maxSec = repmat(maxSec,1,n+1);
 
