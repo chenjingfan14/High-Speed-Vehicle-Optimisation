@@ -376,8 +376,16 @@ if any(numFoils)
     lift = Lbar/span;
     moment = Mbar/span;
     cop = copMaxDiffbar/meanWingChord;
-
-    cost = [1/lift,Cdbar,moment,cop];
+    
+    % Constraint section. Apply penalties if desired values are too
+    % high/low
+    constrain = [moment,cop];
+    minVal = [0,0];
+    maxVal = [inf,inf];
+    
+    penalty = violation(constrain,minVal,maxVal);
+    
+    cost = [1/lift,Cdbar] + penalty;
     
     % If any cost less than zero, particle swarm will see it as optimal,
     % whereas none of these aerodynamic values should be less than zero

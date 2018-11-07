@@ -15,7 +15,7 @@ c1 = 1.49; % Personal acceleration coeff
 c2 = 1.49; % Social acceleration coeff
 
 % Number of decision variables (cost function values)
-nFun = 4;
+nFun = 2;
 
 fi = maxIt; % Display Pareto Front evey fi iterations
 
