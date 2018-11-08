@@ -1,4 +1,4 @@
-function plotmethodsdata(AoA,methodCN,methodCA,~,~,methodCm,impactMatrix,~,expData)
+function plotmethodsdata(AoA,Mach,methodCN,methodCA,methodCm,impactMatrix,expData)
 
 [rows,~] = size(impactMatrix);
 
@@ -8,9 +8,12 @@ labels = cellstr(num2str(nums));
 xLim = [AoA(1)-0.5 AoA(end)+0.5]; 
 
 figure
+pos = figureposition();
+set(gcf, 'Position', pos)
 positionVector = [0.35 0.6, 0.35, 0.35];
 subplot('Position',positionVector)
 hold on
+title(['Mach = ' num2str(Mach)]);
 grid on
 plot(expData(:,1),expData(:,2),'ko')
 plot(AoA,methodCN,'k')

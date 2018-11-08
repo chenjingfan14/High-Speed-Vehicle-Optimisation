@@ -28,7 +28,7 @@ initMatrix = zeros(dim);
 numFoils = 1:sum(~bodyPart); % Total number of aerofoils
 
 % Initialise pressure coffiecient cells for body and aerofoils
-[bodyCp,bodyRadLoc,copCell] = deal(cell(dim));
+[bodyCp,bodyForce,bodyRadLoc,copCell] = deal(cell(dim));
 foilCp = cell(dim(1),dim(2),numFoils);
 
 % Option to analyse panels that lay in shadow of prior panels (flow
@@ -76,10 +76,12 @@ for i=1:runs
     % Initialise shield upper and lower boundaries
     [partCount,foilCount] = deal(1);
     [yzUpBound,yzLoBound] = deal([0,0]);
-    [cellCp,cellRadLoc] = deal(cell(1));
+    [cellCp,cellForce,cellRadLoc] = deal(cell(1));
     
     count = 1;
     colCp = 0;
+    
+%     plotter(rotPoints,"impact")
     
     for j=1:tot
         %% Inner aerodynamic force and moment coefficient prediction loop
@@ -219,15 +221,15 @@ for i=1:runs
                     % if it has large shadow inclination
                     
                     %% CHECK THIS
-                    delShadow = del(shadow);
-                    
-                    ddel = delShadow(2:end) - delShadow(1:end-1);
-                    
-                    con = abs(ddel) > (45*pi/180) | abs(delShadow(2:end)) > (80*pi/180);
-                    %%
-                    
-                    shadowCp(con) = - 1/(Minf^2);
-                    shadowP(con) = 0.5*shadowCp(con)*gamma*(Minf^2) + Pinf;
+%                     delShadow = del(shadow);
+%                     
+%                     ddel = delShadow(2:end) - delShadow(1:end-1);
+%                     
+%                     con = abs(ddel) > (45*pi/180) | abs(delShadow(2:end)) > (80*pi/180);
+%                     %%
+%                     
+%                     shadowCp(con) = - 1/(Minf^2);
+%                     shadowP(con) = 0.5*shadowCp(con)*gamma*(Minf^2) + Pinf;
                     
                     % Cp/Mach/P will all be zero (vacuum conditions)
                     % All are initialised to zero thus nothing needs to be
@@ -283,6 +285,7 @@ for i=1:runs
         if bodyPart(partCount)
             
             cellCp{count} = Cp;
+            cellForce{count} = Cp.*area;
             cellRadLoc{count} = radialLocation;
             
             colCp = colCp + size(cellCp{count},2);
@@ -291,6 +294,7 @@ for i=1:runs
             if colCp == size(bodyCp{i},2) || j == 1
                 
                 bodyCp{i} = [bodyCp{i}; cellCp{:}];
+                bodyForce{i} = [bodyForce{i}; cellForce{:}];
                 bodyRadLoc{i} = [bodyRadLoc{i}; cellRadLoc{:}];
                 
                 [cellCp,cellRadLoc] = deal(cell(1));
@@ -402,7 +406,7 @@ aerodynamics.Cm = Cm;
 aerodynamics.CN = CN;
 aerodynamics.CA = CA;
 aerodynamics.CoP = copCell;
-
+    
 %% To view created configuration, uncomment this
 % Leave commented during simulations, otherwise it will plot everything 
 % plotter(points,"pause")

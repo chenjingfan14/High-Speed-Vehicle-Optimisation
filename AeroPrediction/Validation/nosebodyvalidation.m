@@ -1,12 +1,15 @@
 clear all
+close all
 clc
 
-AoA = -4:2:32;
+which = 1:6;
 
+AoA = -4:2:32;
+Mach = [1.6,2.3,2.96,4.63]';
 l = 0.508;
 % l = 10;
 
-xPanels = 50;
+xPanels = 100;
 disc = 3;
 
 x = (0:1/xPanels:1)';
@@ -35,11 +38,9 @@ else
     costFun = @aeroprediction;
 end
 
-
 load('nosebodyexperimental')
-load('thetaBetaCurves.mat');
+load('thetaBetaCurves.mat')
 
-which = 4;
 dim = length(which);
 
 Aref = zeros(dim,1);
@@ -158,7 +159,7 @@ for Case = which
     
     Aref(count) = pi*max(part)^2;
     
-    plotter(config) 
+%     plotter(config) 
     
     configCell(count,:) = cellprop;
     
@@ -173,8 +174,8 @@ for Case = dim:-1:1
     
     MAC = 0;
     
-    expData = experimentalData{which(Case)};
-    flow = flowparameters(AoA);
+    expData = experimentalData{which(Case),:};
+    flow = flowparameters(AoA,Mach);
     Mrange = [1:0.0001:10,10.1:0.1:100];
     PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
         
@@ -204,33 +205,46 @@ for Case = dim:-1:1
 end
 
 for i = dim:-1:1
-    expData = experimentalData{Case(i)};
     
-    CN = numericalCN{i};
-    CA = numericalCA{i};
-    Cl = numericalCl{i};
-    Cd = numericalCd{i};
-    Cm = numericalCm{i};
     impact = numericalImpact{i};
     shadow = numericalShadow{i};
+    
+    for j = 1:numel(Mach)
+        for k = 1:size(experimentalData,2)
+            con = Mach(j) == experimentalData{1,k};
+            if con
+                col(j) = k;
+            end
+        end
+    end
+    
+    for j = 1:numel(Mach)
+        expData = experimentalData{i+1,col(j)};
 
-    plotmethodsdata(AoA,CN,CA,Cl,Cd,Cm,impact,shadow,expData);
+        CN = numericalCN{i}(:,j);
+        CA = numericalCA{i}(:,j);
+        Cm = numericalCm{i}(:,j);
+
+        plotmethodsdata(AoA',Mach(j),CN,CA,Cm,impact,expData);
+    end
     
-    CNdiff = abs(expData(:,2)' - CN);
-    CAdiff = abs(expData(:,3)'/2 - CA);
-    
-    CNdiffbar(:,i) = mean(CNdiff,2);
-    CAdiffbar(:,i) = mean(CAdiff,2);
-    
-    [nrow,~] = size(CN);
-    numArray = (1:nrow)';
-    
-    CNsorted = sortrows([numArray,CNdiffbar(:,i)],2);
-    CAsorted = sortrows([numArray,CAdiffbar(:,i)],2);
-    
-    CNsortedMethods(:,i) = CNsorted(:,1);
-    CAsortedMethods(:,i) = CAsorted(:,1);
+    % Use for completeaeroprediciton to determine best method
+%     
+%     CNdiff = abs(expData(:,2)' - CN);
+%     CAdiff = abs(expData(:,3)'/2 - CA);
+%     
+%     CNdiffbar(:,i) = mean(CNdiff,2);
+%     CAdiffbar(:,i) = mean(CAdiff,2);
+%     
+%     [nrow,~] = size(CN);
+%     numArray = (1:nrow)';
+%     
+%     CNsorted = sortrows([numArray,CNdiffbar(:,i)],2);
+%     CAsorted = sortrows([numArray,CAdiffbar(:,i)],2);
+%     
+%     CNsortedMethods(:,i) = CNsorted(:,1);
+%     CAsortedMethods(:,i) = CAsorted(:,1);
     
 end
 
-save('numericalNoseBody56.mat','AoA','numericalCN','numericalCA','numericalCl','numericalCd','numericalCm','numericalImpact','numericalShadow','CNsortedMethods','CAsortedMethods')
+% save('numericalNoseBody56.mat','AoA','numericalCN','numericalCA','numericalCl','numericalCd','numericalCm','numericalImpact','numericalShadow','CNsortedMethods','CAsortedMethods')
