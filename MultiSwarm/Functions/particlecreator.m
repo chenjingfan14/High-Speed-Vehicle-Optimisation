@@ -1,4 +1,4 @@
-function [assemblyProperties,Aref,MAC,flag] = particlecreator(configPos,partArrays,sections)
+function [assemblyProperties,parameters,flag] = particlecreator(configPos,partArrays,sections)
 %% Assembles arbitrary configuration
 % Will fuse together multiple aerofoil sections with body. Will also work
 % for aerofoil alone or body alone configurations
@@ -47,7 +47,7 @@ for ii=wingDim:-1:1
     offset = wingPos(any(wingStr == ["xOffset","zOffset"]',1));
     
     % Create aerofoil
-    aerofoil(ii) = wingtail(dihedral,semispan,chord,sweep,offset,sections);
+    liftSurface(ii) = wingtail(dihedral,semispan,chord,sweep,offset,sections);
 end
 
 %% Create body and assemble
@@ -59,7 +59,7 @@ if any(aftbodyCon)
     
     % Again initialise correct indices along with their physical defition
     % for each body part
-    % aftbodyStr = partArrays{aftbodyDim,2};
+    aftbodyStr = partArrays{aftbodyDim,2};
     forebodyStr = partArrays{forebodyDim,2};
     noseStr = partArrays{noseDim,2};
     
@@ -74,18 +74,15 @@ if any(aftbodyCon)
     noseLength = nosebodyPos(noseStr == "NoseLength");
     noseRad = nosebodyPos(noseStr == "NoseRad");
     foreBodyLength = forebodyPos(forebodyStr == "ForeLength");
-    xNosePlusFore = noseLength + foreBodyLength;
+    noseForeLength = noseLength + foreBodyLength;
     
+    aftBodyLength = aftbodyPos(aftbodyStr == "AftLength");
     % Create aft body portion of body
-    aftbody = arbitraryfuse(aftbodyPos,xNosePlusFore);
+    aftbody = arbitraryfuse(aftbodyPos,noseForeLength);
     
-    if ~any(wingCon)
-        MAC = aftbody.Length/2;
-        Aref = aftbody.Area;
-        aerofoil = '';
-    else
+    if any(wingCon)
         % Join body and aerofoil together
-        [aerofoil,aftbody,success] = bodyfoil(aftbody,aerofoil);
+        [liftSurface,aftbody,success] = bodyfoil(aftbody,liftSurface);
         
         % If joining is unsuccessful, configuration not feasible, stop
         % bodyfoil and return to particlecreator with flag
@@ -93,7 +90,7 @@ if any(aftbodyCon)
             flag = false;
         else
             flag = true;
-            [assemblyProperties,Aref,MAC] = deal([]);
+            [assemblyProperties,parameters] = deal([]);
             return
         end
     end
@@ -114,7 +111,7 @@ if any(aftbodyCon)
         nosePoints.y = zeros(1,dim_f);
         nosePoints.z = zeros(1,dim_f);
     else
-        Nose = nose(nosebodyPos,dim_f,xNosePlusFore);
+        Nose = nose(nosebodyPos,dim_f,noseForeLength);
         nosePoints = Nose.Points;
     end
     
@@ -128,14 +125,26 @@ end
 if any(wingCon) % Aerofoil(s)
     
     % Discretise aerofoils based on target length
-    aerofoil = discwing(aerofoil);
-    % Aerofoil 1 assumed to be wing
-    MAC = aerofoil(1).MAC;
-    Aref = aerofoil(1).Area;
+    liftSurface = discwing(liftSurface);
+    % liftSurface 1 assumed to be wing
     
+    wing = liftSurface(1);
+    
+    Aref = sum(wing.Area);
+    MAC = sum(wing.Area.*wing.MAC)/Aref;
+else
+    Aref = aftbody.Area;
+    MAC = aftbody.Length/2;parameters.BodyW = aftbody.Width;
+    liftSurface = '';
 end
 
+parameters.Aref = Aref;
+parameters.MAC = MAC;
+parameters.NoseL = noseForeLength;
+parameters.BodyL = noseForeLength + aftBodyLength;
+parameters.BodyW = aftbody.Width;
+parameters.BodyH = aftbody.Height;
 
 %% Put assembly into single cell, delete any empty parts
-assemblyProperties = {Nose,forebody,aftbody,aerofoil};
+assemblyProperties = {Nose,forebody,aftbody,liftSurface};
 assemblyProperties(strcmp(assemblyProperties,'')) = [];

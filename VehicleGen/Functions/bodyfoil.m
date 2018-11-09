@@ -156,7 +156,26 @@ for i=1:numAerofoils
     % Wing first and last point sets now replaced with upper and lower
     % bridge points found above
     wingtail.Points.xyz = [upperBridge,foil(:,4:end-3),lowerBridge];
-    aerofoil(i).Points = pointstoxyz(wingtail.Points);
+    wingtail.Points = pointstoxyz(wingtail.Points);
+    
+    wetChord1 = diff(xUpperBridge([1 end]));
+    wetChord2 = wingtail.Chord(2);
+    
+    y1 = reshape(wingtail.Points.y(:,[1 end]),[],1);
+    y2 = reshape(wingtail.Points.y(:,[2 end-1]),[],1);
+    wetSpan = diff(mean([y1 y2],1));
+    
+    wetArea = ((wetChord2 + wetChord1)/2)*wetSpan;
+    Taper = wetChord2/wetChord1;
+    if Taper == inf
+        Taper = 0;
+    end
+    wetMAC = (2/3)*wetChord1*((1+Taper+(Taper^2))/(1+Taper));
+    
+    wingtail.WetChord(1) = diff(xUpperBridge([1 end]));
+    wingtail.WetArea(1) = wetArea;
+    wingtail.WetSpan(1) = wetSpan;
+    wingtail.WetMAC(1) = wetMAC;
 end
 
 aftBody.Points = xyztopoints(aftBody.Points);

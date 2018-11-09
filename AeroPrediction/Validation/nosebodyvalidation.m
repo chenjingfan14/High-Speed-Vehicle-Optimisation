@@ -134,7 +134,7 @@ for Case = which
         xp2(end+1) = xp2(end);
         y2(end+1,:) = 0;
         z2(end+1,:) = 0;
-        cellprop{3} = [];
+        cellprop{3} = '';
 
     end
     
@@ -159,9 +159,9 @@ for Case = which
     
     Aref(count) = pi*max(part)^2;
     
-%     plotter(config) 
+    plotter(config) 
     
-    configCell(count,:) = cellprop;
+    configsCell(count,:) = cellprop;
     
     count = count + 1;
     
@@ -169,19 +169,28 @@ for Case = which
     
 end
 
+parameters.BodyL = l;
+parameters.BodyW = max(part);
+parameters.BodyH = max(part);
+parameters.NoseL = 0.45*l;
+
 % Can put in parallel
 for Case = dim:-1:1
     
-    MAC = 0;
+    caseCell = configsCell(Case,:);
+    caseCell(strcmp(caseCell,'')) = [];
+    
+    parameters.Aref = Aref(Case);
+    parameters.MAC = 0;
     
     expData = experimentalData{which(Case),:};
     flow = flowparameters(AoA,Mach);
     Mrange = [1:0.0001:10,10.1:0.1:100];
     PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
-        
+    
     if complete
         
-        [AoA,~,methodCN,methodCA,methodCl,methodCd,methodCm,impactMatrix,shadowMatrix] = feval(costFun,configCell(Case,:),flow,Aref(Case),MAC,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+        [AoA,~,methodCN,methodCA,methodCl,methodCd,methodCm,impactMatrix,shadowMatrix] = feval(costFun,caseCell,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
         numericalCp{Case} = methodCp;
         numericalCN{Case} = methodCN;
         numericalCA{Case} = methodCA;
@@ -192,7 +201,7 @@ for Case = dim:-1:1
         numericalShadow{Case} = shadowMatrix;
         
     else
-        [~,aerodynamics] = feval(costFun,configCell(Case,:),flow,Aref(Case),MAC,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+        [~,aerodynamics] = feval(costFun,caseCell,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
         
         numericalCN{Case} = aerodynamics.CN;
         numericalCA{Case} = aerodynamics.CA;

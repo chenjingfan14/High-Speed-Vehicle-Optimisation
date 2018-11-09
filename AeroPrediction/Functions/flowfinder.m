@@ -1,4 +1,4 @@
-function [points,numParts,bodyPart,impactMethod,shadowMethod] = flowfinder(properties)
+function [points,numParts,bodyPart,partType,impactMethod,shadowMethod] = flowfinder(properties)
 %% Aerodynamic prediction method mixer
 % Defines which prediction method to be used for each part and
 % impact/shadow flow
@@ -6,17 +6,19 @@ function [points,numParts,bodyPart,impactMethod,shadowMethod] = flowfinder(prope
 % Ensure no cells are empty, if so delete them
 properties = properties(~cellfun('isempty',properties));
 
-dim = length(properties);
+dim = numel(properties);
 
 bodyPart = true(dim,1);
-[numParts,impactMethod,shadowMethod] = deal(zeros(dim,1));
+[numParts,impactMethod,shadowMethod,partType] = deal(zeros(dim,1));
+
+partType = string(partType);
 
 %% Prediction method matrices
 % Numbers correspond to switch case in parent function (aeroprediction)
 for i=1:dim
     propPoints = properties{i}.Points;
     numParts(i) = length(propPoints);
-    type = propPoints.Name;
+    partType(i) = propPoints.Name;
     
     % Prediction method mixer: Change method via aeroprediction
     % Impact:   1 - Modified Newtonian
@@ -25,7 +27,7 @@ for i=1:dim
     %           4 - Tangent Wedge/Cone
     % Shadow:   1 - Newtonian/Base Pressure
     %           2 - Prandtl-Meyer
-    switch type
+    switch partType(i)
         case "aerofoil"
             
             bodyPart(i) = false;

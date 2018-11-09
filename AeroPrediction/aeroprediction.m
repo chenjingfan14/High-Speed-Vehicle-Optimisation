@@ -1,4 +1,4 @@
-function [cost,aerodynamics] = aeroprediction(properties,flow,Aref,MAC,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
+function [cost,aerodynamics] = aeroprediction(properties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
 %% Aerodynamic prediction
 
 %% Initialisation
@@ -11,12 +11,14 @@ MinfMat = flow.Minf;
 % Free stream flow parameters
 Pinf = flow.Pinf;
 rho = flow.rho; Uinf = flow.Uinf;
-gamma = flow.gamma;
+
+Aref = parameters.Aref;
+MAC = parameters.MAC;
 
 % Takes section properties and outputs point matrices, number of parts,
 % whether part is part of body, and prediction methods to be used for every
 % section
-[points,numParts,bodyPart,impactMethod,shadowMethod] = flowfinder(properties);
+[points,numParts,bodyPart,partType,impactMethod,shadowMethod] = flowfinder(properties);
 
 tot = sum(numParts); % Total number of parts
 
@@ -345,12 +347,19 @@ for i=1:runs
         
     end
     
+    %% Friction calculation
+    % Independent of AoA
+    Cdf = simplefriction(properties,partType,parameters,run);
+    % Cdf = 0;
     %% Total configuration characteristics
     
     % Sum coefficients for flight state, distribute to respective variables
     coeffs = num2cell(sum([partCl,partCd,partCN,partCA,partCm],1));
     
     [Cl(i),Cd(i),CN(i),CA(i),Cm(i)] = deal(coeffs{:});
+    
+    CA(i) = CA(i) + Cdf;
+    Cd(i) = Cd(i) + Cdf;
     
     cop = sum(xyzCp)/sum(sumCp);
     

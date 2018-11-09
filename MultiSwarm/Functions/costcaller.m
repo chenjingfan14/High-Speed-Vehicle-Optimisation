@@ -7,21 +7,21 @@ count = 0; % Count successful configuration creations
 if options.parallel
     parfor i=1:nPop
         % Attempt to create configuration
-        [parProperties,Aref,MAC,flag] = particlecreator(parPos(i,:),partArrays,sections(i,:));
+        [parProperties,parameters,flag] = particlecreator(parPos(i,:),partArrays,sections(i,:));
         if flag % If unsuccessful, set fitness values to infinity
             parFit(i,:) = ones(1,nFun)*inf;
         else % Else use cost function to calculate fitness
-            parFit(i,:) = feval(costFun,parProperties,flow,Aref,MAC,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+            parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
             count = count+1;
         end
     end
 else % Same as above but for single-core processing
     for i=1:nPop
-        [parProperties,Aref,MAC,flag] = particlecreator(parPos(i,:),partArrays,sections(i,:));
+        [parProperties,parameters,flag] = particlecreator(parPos(i,:),partArrays,sections(i,:));
         if flag
             parFit(i,:) = ones(1,nFun)*inf;
         else
-            parFit(i,:) = feval(costFun,parProperties,flow,Aref,MAC,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+            parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
             count = count+1;
         end
     end

@@ -8,9 +8,14 @@ classdef wingtail
         % "Linear", "Cosine" or "HalfCosine"
         Distribution = "Cosine"
         Points
+        Chord
         Area
         Span
         MAC
+        WetChord
+        WetArea
+        WetSpan
+        WetMAC
         Partitions
         Boolean
         
@@ -58,7 +63,7 @@ classdef wingtail
                 bh(i) = prev+semispan(i);
                 xLE(i+1) = xLE(i)+semispan(i)*tan(Lam(i));
                 Area(i) = ((c(i+1)+c(i))/2)*semispan(i);
-                Taper = c(i)/c(i+1);
+                Taper = c(i+1)/c(i);
                 if Taper == inf
                     Taper = 0;
                 end
@@ -68,10 +73,10 @@ classdef wingtail
                 
             end
             
-            mat = [Area; cbar];
-            multi = mat(1,:).*mat(2,:);
-            obj.Area = sum(Area);
-            obj.MAC = sum(multi)/sum(Area);
+            obj.Area = Area;
+            obj.WetArea = Area;
+            obj.MAC = cbar;
+            obj.WetMAC = cbar;
             
             y = [0,bh]*cos(di);
             z = offset(2)+([0,bh]*sin(di));
@@ -145,7 +150,10 @@ classdef wingtail
                 wing.z = [z_u, fliplr(z_l)];
             end
             
-            obj.Span = sum(semispan);
+            obj.Chord = chord;
+            obj.WetChord = chord;
+            obj.Span = semispan;
+            obj.WetSpan = semispan;
             obj.Offset = offset;
             obj.Points = xyztopoints(wing);
             obj.Points.Name = "aerofoil";
