@@ -38,6 +38,7 @@ for i=dim:-1:1
             if computeBody
                 % Calculates friction for FULL body
                 Cdw(i) = 3.6/((noseL/D_eq)*(M-1) + 3);
+                Cdw(i) = 0;
                 Cdf(i) = 0.053 * (bodyL/D_eq) * ((M/(q*bodyL))^0.2) * (Sbody/Aref); %note reference area is the total wing planform area.
                 computeBody = false;
             end

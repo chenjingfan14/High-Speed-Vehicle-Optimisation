@@ -10,10 +10,13 @@ alphaMat = flow.alpha;
 MinfMat = flow.Minf;
 % Free stream flow parameters
 Pinf = flow.Pinf;
-rho = flow.rho; Uinf = flow.Uinf;
+rho = flow.rho;
+Uinf = flow.Uinf;
 
+% Configuration reference parameters
 Aref = parameters.Aref;
 MAC = parameters.MAC;
+wingspan = parameters.Wingspan;
 
 % Takes section properties and outputs point matrices, number of parts,
 % whether part is part of body, and prediction methods to be used for every
@@ -256,17 +259,6 @@ for i=1:runs
             P(1,:) = [];
         end
         
-        %% Viscous Calculation
-        if viscous
-            if part.Name == "nose"
-                rot = (alpha*pi/180) + partProp.Rotation;
-            else
-                rot = 0;
-            end
-            rotPoints = cornervelocities(rotPoints,rot,run);
-            
-            intstreamline(rotPoints,run);
-        end
         %% Wing bending moment
         % Only call if part is first aerofoil (wing should always be set up
         % to be first aerofoil in configuration)
@@ -348,9 +340,23 @@ for i=1:runs
     end
     
     %% Friction calculation
-    % Independent of AoA
-    Cdf = simplefriction(properties,partType,parameters,run);
-    % Cdf = 0;
+    if viscous
+%         if part.Name == "nose"
+%             rot = (alpha*pi/180) + partProp.Rotation;
+%         else
+%             rot = 0;
+%         end
+%         rotPoints = cornervelocities(rotPoints,rot,run);
+%         
+%         intstreamline(rotPoints,run);
+        
+        % Independent of AoA
+        Cdf = simplefriction(properties,partType,parameters,run);
+        
+    else
+        Cdf = 0;
+    end
+    
     %% Total configuration characteristics
     
     % Sum coefficients for flight state, distribute to respective variables
@@ -383,12 +389,9 @@ if any(numFoils)
     Cdbar = mean(Cd(:));
     Mbar = mean(rootMoment(:));
 
-    span = properties{end}.Span;
-    meanWingChord = properties{end}.MAC;
-
-    lift = Lbar/span;
-    moment = Mbar/span;
-    cop = copMaxDiffbar/meanWingChord;
+    lift = Lbar/wingspan;
+    moment = Mbar/wingspan;
+    cop = copMaxDiffbar/MAC;
     
     % Constraint section. Apply penalties if desired values are too
     % high/low

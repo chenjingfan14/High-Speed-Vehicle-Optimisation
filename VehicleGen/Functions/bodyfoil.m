@@ -176,6 +176,8 @@ for i=1:numAerofoils
     wingtail.WetArea(1) = wetArea;
     wingtail.WetSpan(1) = wetSpan;
     wingtail.WetMAC(1) = wetMAC;
+    
+    aerofoil(i) = wingtail;
 end
 
 aftBody.Points = xyztopoints(aftBody.Points);

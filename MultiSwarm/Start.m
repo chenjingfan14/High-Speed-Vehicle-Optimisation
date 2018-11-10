@@ -3,12 +3,21 @@ clear all
 close all
 clc
 
+addpath(genpath('MultiSwarm'))
+addpath(genpath('VehicleGen'))
+addpath(genpath('AeroPrediction'))
+
 options = simOptions();
 Bezier = options.Bezier;
 
-% Swarm size (must be divisible by 3 for mutation subsets in MOPSO)
-nPop = 60;
-maxIt = 3; % Maximum number of iterations
+if options.parallel
+    parpool('local',4)
+end
+
+% Swarm size (must be divisible by 2 & 3 for global best and mutation
+% subsets in MOPSO)
+nPop = 30;
+maxIt = 10; % Maximum number of iterations
 
 w = 0.3; % Intertia coeff
 c1 = 1.49; % Personal acceleration coeff
@@ -69,7 +78,6 @@ if Bezier
 
 else
     minSec = 1;
-    maxSec = 33;
     
     variCons = {"Variables",    "Num Of",   "Conditions"    'Transformations';...
     "Dihedral",             "~",        "~",            '~';...
@@ -91,9 +99,9 @@ else
     "zNoseOffset",          "~",        "~",            '.*AftHeight/2';...
     "ForeLength",           "~",        "~",            '~'};
     
-    % Load coordinates of 2D aerofoil sections into matrices within cell & 
-    % freestream flow parameters into structure
-    foilData = getaerofoilsecdata();
+    % Load coordinates of 2D aerofoil sections into matrices within cell,
+    % max defined by number of stored data files
+    [foilData,maxSec] = getaerofoilsecdata();
 
 end
 
@@ -187,7 +195,7 @@ if nFun == 1
     maxStall = 500;
     
     [GlobalBestFit,GlobalBestPos] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
-else
+else    
     
     inv = false(1,nFun);
     inv = logical(inv);
@@ -197,5 +205,9 @@ else
     [GlobalBestFit,GlobalBestPos] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 end
 
+if options.parallel
+    delete(gcp('nocreate'));
+end
+
 % Use this function to create output plots of configurations
-viewcaller(GlobalBestPos,cond,varArray,foilData,n,flow,options);
+% viewcaller(GlobalBestPos,cond,varArray,foilData,n,flow,options);

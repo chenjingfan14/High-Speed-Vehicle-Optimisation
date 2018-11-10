@@ -34,7 +34,7 @@ Bezier = options.Bezier;
 
 [partArrays,sectionArray] = partIndexing(cond,varArray);
 
-[parPos,physicalPos] = conditioning(parPos,cond,varArray);
+[parPos,physicalPos] = conditioning(parPos,cond,varArray,options);
 
 if Bezier
     sections = Bezier3(physicalPos(:,sectionArray),n,foilData,nPop);
@@ -166,7 +166,7 @@ for it = 2:maxIt+1
     
     %% Only optimisation part dependent on problem
     % Impose conditions
-    [parPos,phyiscalPos] = conditioning(parPos,cond,varArray);
+    [parPos,phyiscalPos] = conditioning(parPos,cond,varArray,options);
     
     if Bezier
         sections = Bezier3(physicalPos(:,sectionArray),n,foilData,nPop);
@@ -241,10 +241,9 @@ for it = 2:maxIt+1
     nonDomFit(j:end,:) = [];
     nonDomPos(j:end,:) = [];
     
-    %% CHECK
+    %% Crowding Distance
     maxfi = max(nonDomFit,[],1);
     minfi = min(nonDomFit,[],1);
-    %%
     
     nonDomFitNorm = (nonDomFit - minfi)./(maxfi - minfi);
     

@@ -1,4 +1,4 @@
-function particleviewer(assemblyProperties,MAC,flow,num)
+function particleviewer(assemblyProperties,num)
 
 prev = 0;
 dimArray = zeros(100,1);

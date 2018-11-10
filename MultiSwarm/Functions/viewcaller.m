@@ -4,7 +4,7 @@ function viewcaller(parPos,cond,varArray,foilData,n,flow,options)
 
 % Impose conditions on particles
 [partArrays,sectionArray] = partIndexing(cond,varArray);
-[~,physicalPos] = conditioning(parPos,cond,varArray);
+[~,physicalPos] = conditioning(parPos,cond,varArray,options);
 
 % Assign 2D section matrices to particles. Foils variable = section indices
 if options.Bezier
@@ -14,9 +14,9 @@ else
 end
 
 for i=1:nPop
-    [assemblyProperties,~,MAC,flag] = particlecreator(physicalPos(i,:),partArrays,sections(i,:));
+    [assemblyProperties,~,flag] = particlecreator(physicalPos(i,:),partArrays,sections(i,:));
     if ~flag
-        particleviewer(assemblyProperties,MAC,flow,i);
+        particleviewer(assemblyProperties,i);
     end
     
     if rem(i,50) == 0

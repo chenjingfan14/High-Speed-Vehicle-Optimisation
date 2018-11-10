@@ -132,13 +132,17 @@ if any(wingCon) % Aerofoil(s)
     
     Aref = sum(wing.Area);
     MAC = sum(wing.Area.*wing.MAC)/Aref;
+    
+    wingspan = sum(wing.Span);
 else
     Aref = aftbody.Area;
     MAC = aftbody.Length/2;parameters.BodyW = aftbody.Width;
+    wingspan = [];
     liftSurface = '';
 end
 
 parameters.Aref = Aref;
+parameters.Wingspan = wingspan;
 parameters.MAC = MAC;
 parameters.NoseL = noseForeLength;
 parameters.BodyL = noseForeLength + aftBodyLength;
