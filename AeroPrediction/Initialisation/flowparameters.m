@@ -51,6 +51,7 @@ flow.Pinf = hvals(7);
 flow.Tinf = hvals(1);
 flow.R = 287;
 flow.rho = hvals(2);
+flow.mu = hvals(8);
 flow.a = a;
 flow.delq = matchdel;
 flow.Machq = matchMach;

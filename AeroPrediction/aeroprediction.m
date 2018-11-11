@@ -351,8 +351,8 @@ for i=1:runs
 %         intstreamline(rotPoints,run);
         
         % Independent of AoA
-        Cdf = simplefriction(properties,partType,parameters,run);
-        
+        % Cdf = simplefriction(properties,partType,parameters,run);
+        Cdf = friction(points,flow);
     else
         Cdf = 0;
     end

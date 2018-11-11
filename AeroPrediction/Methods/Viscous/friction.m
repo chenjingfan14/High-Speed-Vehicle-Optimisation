@@ -15,11 +15,12 @@ r = Pr.^(1/3);
 Tt = Te*(1 + (gamma - 1)*((Me^2)/2));
 
 Tr = r*(Tt - Te) + Te;
+Tw = Tr;
 
 TRef = Te + 0.5*(Tw - Te) + 0.22*(Tr - Te);
 
-% Ideal gas law
-rhoRef = 0;
+% Ideal gas law (TRef? P?)
+rhoRef = R*Tref./P;
 % Sutherland's law
 muRef = 0;
 

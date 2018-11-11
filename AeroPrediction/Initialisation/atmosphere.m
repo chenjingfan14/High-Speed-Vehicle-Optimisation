@@ -11,6 +11,7 @@ Po = 1.01325e5; %sea level pressure (N/m^2)
 re = 6378.14e3; %earth’s mean radius (m)
 Beta = 1.458e-6; %Sutherland’s constant (kg/m.s.K^0.5)
 gamma = 1.405; %sea level specific-heat ratio
+
 B = 2/re; layers = 21; Z = 1e3*[0.00; 11.0191; 20.0631; 32.1619;
     47.3501; 51.4125;
     71.8020; 86.00; 100.00; 110.00; 120.00; 150.00; 160.00; 170.00; 190.00;
@@ -26,6 +27,7 @@ LR = [-6.5e-3; 0; 1e-3; 2.8e-3; 0; -2.8e-3; -2e-3;
     1.693e-3; 5.00e-3; 1e-2; 2e-2; 1.5e-2; 1e-2; 7e-3; 5e-3; 4e-3;
     3.3e-3; 2.6e-3; 1.7e-3; 1.1e-3; 0];
 rho0 = Po/(R*To); P(1) = Po; T(1) = To; rho(1) = rho0;
+
 for i =1:layers
     if ~(LR(i) == 0)
         C1 = 1 + B*( T(i)/LR(i) - Z(i) );
@@ -41,6 +43,7 @@ for i =1:layers
         P(i+1) = P(i)*exp(C8); rho(i+1) = rho(i)*exp(C8);
     end
 end
+
 for i = 1:21
     if h < Z(i+1)
         if ~(LR(i)== 0)
@@ -64,7 +67,7 @@ for i = 1:21
         
         asound = sqrt(gamma*R*TM); % Speed of Sound (m/s)
         MU = Beta*TM^1.5/(TM + S); % Dynamic Viscosity Coeff. (N.s/m^2)
-        KT = 2.64638e-3*TM^1.5/(TM + 245.4*10^(-12/TM));
+        KT = 2.64638e-3*TM^1.5/(TM + 245.4*10^(-12/TM)); % Thermal Conductivity
         Vm = sqrt(8*R*TM/pi); m = MOL*1e-3/Na; n = rhoE/m;
         F = sqrt(2)*pi*n*sigma^2*Vm;
         L = Vm/F; % Mean free-path (m)
