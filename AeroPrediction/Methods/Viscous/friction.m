@@ -6,7 +6,12 @@ function Cdf = friction(points,flow)
 
 % Constant 0.7 in above ref
 Pr = flow.Pr;
-Me = flow.Mach;
+
+% Should Ae values be Ainf??
+Pe = flow.Pinf;
+Me = flow.Minf;
+a = flow.a;
+Ve = Me*a;
 Te = flow.Tinf;
 gamma = flow.gamma;
 
@@ -22,7 +27,7 @@ TRef = Te + 0.5*(Tw - Te) + 0.22*(Tr - Te);
 % Ideal gas law (TRef? P?)
 rhoRef = R*Tref./P;
 % Sutherland's law
-muRef = 0;
+muRef = (1.458*10^-6)*(TRef^1.5)/(T + 110.4);
 
 ReRefx = (rhoRef*Ve*x)/muRef;
 

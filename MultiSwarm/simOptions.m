@@ -15,4 +15,4 @@ options.hardconditioning = true;
 options.shielding = false;
 
 % Viscous capability still being created, leave false
-options.viscous = false;
+options.viscous = true;

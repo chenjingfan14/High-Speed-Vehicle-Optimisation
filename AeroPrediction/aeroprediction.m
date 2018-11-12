@@ -352,7 +352,7 @@ for i=1:runs
         
         % Independent of AoA
         % Cdf = simplefriction(properties,partType,parameters,run);
-        Cdf = friction(points,flow);
+        Cdf = friction(points,run);
     else
         Cdf = 0;
     end

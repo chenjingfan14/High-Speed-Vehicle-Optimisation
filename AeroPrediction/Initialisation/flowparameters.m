@@ -25,6 +25,7 @@ end
 
 alt = 32850;
 gamma = 1.4;
+R = 287;
 
 % Freestream stagnation pressure ratio
 Pinf_P0 = (2./((gamma+1)*(Minf.^2))).^(gamma/(gamma-1)) .* (((2*gamma*(Minf.^2))-(gamma-1))/(gamma+1)).^(1/(gamma-1));
@@ -40,8 +41,13 @@ end
 
 hvals = atmosphere(alt,0,0); % Find flow parameters
 
-a = hvals(5); % Speed of sound 
+a = hvals(5); % Speed of sound
+mu = hvals(8); % Dynamic viscosity
+kt = hvals(10); % Thermal conductivity
 Uinf = Minf*a;
+
+cp = R*gamma/(gamma-1);
+Pr = mu*cp/kt;
 
 flow.alpha = alpha;
 flow.Minf = Minf;
@@ -49,7 +55,8 @@ flow.gamma = gamma;
 flow.Uinf = Uinf;
 flow.Pinf = hvals(7);
 flow.Tinf = hvals(1);
-flow.R = 287;
+flow.R = R;
+flow.Pr = Pr;
 flow.rho = hvals(2);
 flow.mu = hvals(8);
 flow.a = a;
