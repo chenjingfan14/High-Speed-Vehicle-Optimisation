@@ -37,6 +37,7 @@ Bezier = options.Bezier;
 [parPos,physicalPos] = conditioning(parPos,cond,varArray,options);
 
 if Bezier
+    % Create 2D aerofoil section Bezier curves from control points
     sections = Bezier3(physicalPos(:,sectionArray),n,foilData,nPop);
 else
     % Assign 2D section matrices to particles. Foils variable = section indices

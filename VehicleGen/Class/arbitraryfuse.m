@@ -3,6 +3,7 @@ classdef arbitraryfuse < body
     %   Detailed explanation goes here
     
     properties
+        Name = "aftbody"
         delta = 0.1
         Height
         Width

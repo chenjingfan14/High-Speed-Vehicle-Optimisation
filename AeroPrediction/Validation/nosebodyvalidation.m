@@ -4,8 +4,16 @@ clc
 
 which = 1:6;
 
-AoA = -4:2:32;
-Mach = [1.6,2.3,2.96,4.63]';
+% User-defined Angle of Attack. Leave empty ([]) to use experimental data
+% AoAs
+AoA = [];
+
+% All available Mach number
+% Mach = [1.6,2.3,2.96,4.63]';
+
+% Chosen Mach numbers to compare
+Mach = [4.63]';
+
 l = 0.508;
 % l = 10;
 
@@ -123,11 +131,11 @@ for Case = which
         y3(1,:) = y2(end,:);
         z3(1,:) = z2(end,:);
         
-        config(3).Name = "aftbody";
         config(3).x = xp3;
         config(3).y = y3;
         config(3).z = z3;
         cellprop{3} = Properties;
+        cellprop{3}.Name = "aftbody";
         
     else
         
@@ -138,18 +146,18 @@ for Case = which
 
     end
     
-    config(1).Name = "forebody";
     config(1).x = xp;
     config(1).y = y;
     config(1).z = z;
         
-    config(2).Name = "aftbody";
     config(2).x = xp2;
     config(2).y = y2;
     config(2).z = z2;
     
     cellprop{1} = Properties;
+    cellprop{1}.Name = "forebody";
     cellprop{2} = Properties;
+    cellprop{2}.Name = "aftbody";
     
     config = xyztopoints(config);
     
@@ -182,8 +190,15 @@ for Case = dim:-1:1
     
     parameters.Aref = Aref(Case);
     parameters.MAC = 0;
+    parameters.Wingspan = 0;
     
-    expData = experimentalData{which(Case),:};
+    expData = experimentalData{which(Case)+1,:};
+    
+    if isempty(AoA)
+        AoA = expData(:,1);
+        AoA = AoA(1:14);
+    end
+    
     flow = flowparameters(AoA,Mach);
     Mrange = [1:0.0001:10,10.1:0.1:100];
     PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);

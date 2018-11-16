@@ -21,9 +21,16 @@ conx = I(:,1) >= xBody(1) & I(:,1) <= xBody(2) | I(:,1) >= xBody(2) & I(:,1) <= 
 cony = I(:,2) >= yBody(j) & I(:,2) <= yBody(j+1) | I(:,2) >= yBody(j+1) & I(:,2) <= yBody(j);
 conz = I(:,3) >= zBody(j) & I(:,3) <= zBody(j+1) | I(:,3) >= zBody(j+1) & I(:,3) <= zBody(j);
 
-intersection = I(conx & cony & conz,:);
+I = I(conx & cony & conz,:);
 
-% Ensure only one intersection is returned
-if ~isempty(intersection)
-    intersection = intersection(1,:);
+if isempty(I)
+    intersection = [];
+else
+    
+    % Ensures intersection point is between P0 and P1, outwith will return
+    % a infeasible design
+    between = (I(1) >= P0(1) & I(1) <= P1(1)) | (I(1) >= P1(1) & I(1) <= P0(1));
+
+    % Ensure only one intersection is returned
+    intersection = I(between(1),:);
 end

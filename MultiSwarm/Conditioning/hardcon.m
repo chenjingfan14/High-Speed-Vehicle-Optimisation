@@ -84,7 +84,18 @@ for i = 1:dim
                 
             otherwise
                 counter = 1;
+                
+                % For occasions where multiple conditions are present.
+                % Currently these occasions are assumed only to be when
+                % such conditions are based on other particle parameters,
+                % ie. can only be indexes, not arbitrary number constraints
                 for j = targArray
+                    
+                    if isnan(consArray(counter))
+                        counter = counter + 1;
+                        continue
+                    end
+                    
                     target = parPos(:,j);
                     
                     if contains(equation,"constraint")

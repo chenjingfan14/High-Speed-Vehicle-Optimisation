@@ -39,12 +39,12 @@ for i=2:dim1
             condition = ' == ';
         end
         if contains(con,"Previous")
-            constraint = target([1 1:end-1]);
+            constraint = [NaN, target(1:end-1)];
             setto = constraint;
             equation = ['target' condition 'constraint'];
         end
         if contains(con,"Next")
-            constraint = target([2:end end]);
+            constraint = [target(2:end), NaN];
             setto = constraint;
             equation = ['target' condition 'constraint'];
         end

@@ -4,14 +4,8 @@ function [cost,aerodynamics] = aeroprediction(properties,flow,parameters,thetaBe
 %% Initialisation
 % Angle of attack, Mach matrix dimensions and total number of flight states
 % to be run
-dim = flow.dim;
-runs = flow.runs;
-alphaMat = flow.alpha;
-MinfMat = flow.Minf;
-% Free stream flow parameters
-Pinf = flow.Pinf;
-rho = flow.rho;
-Uinf = flow.Uinf;
+dim = flow.Dim;
+runs = flow.Runs;
 
 % Configuration reference parameters
 Aref = parameters.Aref;
@@ -21,14 +15,14 @@ wingspan = parameters.Wingspan;
 % Takes section properties and outputs point matrices, number of parts,
 % whether part is part of body, and prediction methods to be used for every
 % section
-[points,numParts,bodyPart,partType,impactMethod,shadowMethod] = flowfinder(properties);
+[points,properties,bodyPart,partType,impactMethod,shadowMethod] = flowfinder(properties);
 
-tot = sum(numParts); % Total number of parts
+tot = numel(properties); % Total number of parts
 
 % Initialise total aerodynamic coefficients
 initMatrix = zeros(dim);
 
-[Cl,Cd,CN,CA,Cm,rootMoment,copx] = deal(initMatrix);
+[Cl,Cd,CN,CA,Cm,L,D,rootMoment,copx] = deal(initMatrix);
 
 numFoils = 1:sum(~bodyPart); % Total number of aerofoils
 
@@ -40,28 +34,43 @@ foilCp = cell(dim(1),dim(2),numFoils);
 % direction wise) as shadow instead of impact
 shielding = options.shielding;
 viscous = options.viscous;
+control = options.control;
 
 for i=1:runs
     %% Outer flight state loop 
     
     run = flightstate(flow,i);
     
-    alpha = alphaMat(i);
-    Minf = MinfMat(i);
+    alpha = run.alpha;
+    Minf = run.Minf;
+    delta = run.delta;
+    
+    Uinf = run.Uinf;
+    Pinf = run.Pinf;
+    rho = run.rho;
     
     xyAngle = run.planeAngles(1);
     xzAngle = run.planeAngles(2);
     yzAngle = run.planeAngles(3);
     
-    if i == 1 || MinfMat(i) ~= MinfMat(i-1)
+    if i == 1 || Minf ~= MinfPrev
         % Find maximum compression angle for which attached shock solution exists
         % for free stream Mach number
         loc = Minf == maxThetaBetaM(1,:);
         maxThetaInf = maxThetaBetaM(2,loc);
     end
     
-    if viscous && (i == 1 || alphaMat(i) ~= alphaMat(i-1))
+    if viscous && (i == 1 || alpha ~= alphaPrev)
         points = velocitydef(points,run);
+    end
+    
+    if control
+        if i == 1
+            % Only takes in first non-body properties cell
+            points(~bodyPart) = deflectcontrolsufrace(properties{~bodyPart},points(~bodyPart),delta);
+        elseif delta ~= deltaPrev
+            points(~bodyPart) = deflectcontrolsufrace(properties{~bodyPart},points(~bodyPart),delta,deltaPrev);
+        end
     end
     
     % Initialise aerodynamic coefficients for each part, every angle of
@@ -79,7 +88,7 @@ for i=1:runs
     rotPoints = rotate(points,MAC,alpha);
     
     % Initialise shield upper and lower boundaries
-    [partCount,foilCount] = deal(1);
+    foilCount = 1;
     [yzUpBound,yzLoBound] = deal([0,0]);
     [cellCp,cellForce,cellRadLoc] = deal(cell(1));
     
@@ -90,7 +99,7 @@ for i=1:runs
     
     for j=1:tot
         %% Inner aerodynamic force and moment coefficient prediction loop
-        partProp = properties{partCount};
+        partProp = properties{j};
         part = points(j);
         rotPart = rotPoints(j);
         conical = partProp.Conical;
@@ -120,7 +129,7 @@ for i=1:runs
         % characteristics, unless it is the first body part (ie jj = 1).
         % For this and for aerofoils, prior characteristics = freestream
         % conditions
-        if bodyPart(partCount) && j > 1 % Previous body part conditions
+        if bodyPart(j) && j > 1 % Previous body part conditions
             
             cols = (1:col) + bodyOff;
             prevdel = prevBodyAngle(cols);
@@ -168,7 +177,7 @@ for i=1:runs
         if any(impact(:))
             
             impactdel = del(impact);
-            iMethod = impactMethod(partCount);
+            iMethod = impactMethod(j);
             
             % If using oblique shock/tangent method, initial inclination to
             % flow for attached shock must be less than maximum allowable
@@ -212,7 +221,7 @@ for i=1:runs
         %% Shadow solver
         if any(shadow(:))
             
-            sMethod = shadowMethod(partCount);
+            sMethod = shadowMethod(j);
             
             % Initialise shadow panel characteristics as zero arrays
             nrow = sum(shadow(:));
@@ -262,7 +271,7 @@ for i=1:runs
         %% Wing bending moment
         % Only call if part is first aerofoil (wing should always be set up
         % to be first aerofoil in configuration)
-        if part.Name == "aerofoil" && foilCount == 1
+        if any(partProp.Name == ["aerofoil","Wing"]) && foilCount == 1
             rootMoment(i) = wingbending(Cp,rotPoints(j),run);
         end
         %% Shielding
@@ -276,7 +285,7 @@ for i=1:runs
         % Set final panels as previous characteristics for next part, save
         % Cp for body or aerofoils
         
-        if bodyPart(partCount)
+        if bodyPart(j)
             
             cellCp{count} = Cp;
             cellForce{count} = Cp.*area;
@@ -332,16 +341,16 @@ for i=1:runs
         partCN(j) = 2*sum(-((Cp.*area.*unitNz)))/Aref;
         partCA(j) = 2*sum(-((Cp.*area.*unitNx)))/Aref;
         partCm(j) = sum(-(Cp.*area.*unitNx) + (Cp.*area.*unitNz))/Aref;
-        
-        if j == sum(numParts(1:partCount))
-            partCount = partCount + 1;
-        end
+           
+        MinfPrev = Minf;
+        alphaPrev = alpha;
+        deltaPrev = delta;
         
     end
     
     %% Friction calculation
     if viscous
-%         if part.Name == "nose"
+%         if partProp.Name == "nose"
 %             rot = (alpha*pi/180) + partProp.Rotation;
 %         else
 %             rot = 0;
@@ -352,7 +361,7 @@ for i=1:runs
         
         % Independent of AoA
         % Cdf = simplefriction(properties,partType,parameters,run);
-        Cdf = friction(points,run);
+        Cdf = friction(points,bodyPart,Aref,run);
     else
         Cdf = 0;
     end
@@ -372,7 +381,9 @@ for i=1:runs
     copx(i) = cop(1);
     copCell{i} = cop;
     
-%     plotter(rotPoints,"impact")
+    L(i) = 0.5*rho*(Uinf^2)*Cl(i)*Aref;
+    D(i) = 0.5*rho*(Uinf^2)*Cd(i)*Aref;
+%     plotter(rotPoints)
     
 end
 
@@ -380,7 +391,6 @@ end
 % Usually non-dimensionalised
 
 if any(numFoils)
-    L = 0.5*rho*(Uinf.^2).*Cl*Aref;
 
     copMaxDiff = max(copx,[],1) - min(copx,[],1);
     copMaxDiffbar = mean(copMaxDiff);
@@ -526,3 +536,4 @@ aerodynamics.CoP = copCell;
 %         ylabel('Cp')
 %     end
 % end
+end

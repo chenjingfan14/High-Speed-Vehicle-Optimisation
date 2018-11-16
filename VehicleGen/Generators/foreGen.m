@@ -1,5 +1,6 @@
 function fore = foreGen(foreProperties,Nose,aftbody,delta)
 
+fore.Name = "forebody";
 fore.Conical = true;
 fore.Length = foreProperties(1);
 fore.delta = delta;
@@ -11,7 +12,7 @@ zNose = Nose.z;
 % Number of x-direction panels
 xPanels = ceil(foreProperties(1)/delta);
 
-fore.Points.Name = "forebody";
+% fore.Points.Name = "forebody";
 
 % Interpolate between nose points and start of aftbody
 intx = [xNose; aftbody.x];

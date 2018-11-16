@@ -3,6 +3,7 @@ classdef nose < body
     %   Detailed explanation goes here
     
     properties
+        Name = "nose"
         Radius
         Length
         zOff
@@ -43,7 +44,7 @@ classdef nose < body
       
             end
             
-            a.Name = "nose";
+%             a.Name = "nose";
             x = (x*cos(rot) - z*sin(rot)) - rotArm;
             a.x = x - min(x(:));
             a.y = y;

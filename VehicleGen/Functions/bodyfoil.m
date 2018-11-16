@@ -67,7 +67,7 @@ for i=1:numAerofoils
         exteriorPoint = exteriorPoints(ii,:);
         
         inter = planeintersection(norm(j,:),bodyPoints(end,col)',interiorPoint,exteriorPoint,xBody,yBody',zBody',j);
-        if isempty(inter)
+        if isempty(inter) %|| any(exteriorPoint(2) > yBody) || any(exteriorPoint(3) > zBody)
             aerofoil = []; aftBody = [];
             success = false;
             return
@@ -143,12 +143,12 @@ for i=1:numAerofoils
     xu = repmat(xBody,1,upCut);
     xl = repmat(xBody,1,loCut+1);
     
-    aftBody.Points(1).Name = "aftbody";
+%     aftBody.Points(1).Name = "aftbody";
     aftBody.Points(1).x = [xu(1,:); xBodyUpper; xu(end,:)];
     aftBody.Points(1).y = [yBodyUpper(1,:); yBodyUpper; yBodyUpper(end,:)];
     aftBody.Points(1).z = [zBodyUpper(1,:); zBodyUpper; zBodyUpper(end,:)];
     
-    aftBody.Points(2).Name = "aftbody";
+%     aftBody.Points(2).Name = "aftbody";
     aftBody.Points(2).x = [xl(1,:); xBodyLower; xl(end,:)];
     aftBody.Points(2).y = [yBodyLower(1,:); yBodyLower; yBodyLower(end,:)];
     aftBody.Points(2).z = [zBodyLower(1,:); zBodyLower; zBodyLower(end,:)];
@@ -172,10 +172,10 @@ for i=1:numAerofoils
     end
     wetMAC = (2/3)*wetChord1*((1+Taper+(Taper^2))/(1+Taper));
     
-    wingtail.WetChord(1) = diff(xUpperBridge([1 end]));
-    wingtail.WetArea(1) = wetArea;
-    wingtail.WetSpan(1) = wetSpan;
-    wingtail.WetMAC(1) = wetMAC;
+    wingtail.WetChord = [diff(xUpperBridge([1 end])), wingtail.Chord(2:end)];
+    wingtail.WetArea = [wetArea, wingtail.Area(2:end)];
+    wingtail.WetSpan = [wetSpan, wingtail.Span(2:end)];
+    wingtail.WetMAC = [wetMAC, wingtail.MAC(2:end)];
     
     aerofoil(i) = wingtail;
 end

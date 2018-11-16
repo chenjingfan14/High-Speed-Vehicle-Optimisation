@@ -1,4 +1,4 @@
-function [points,numParts,bodyPart,partType,impactMethod,shadowMethod] = flowfinder(properties)
+function [points,newProperties,bodyPart,partType,impactMethod,shadowMethod] = flowfinder(properties)
 %% Aerodynamic prediction method mixer
 % Defines which prediction method to be used for each part and
 % impact/shadow flow
@@ -8,17 +8,48 @@ properties = properties(~cellfun('isempty',properties));
 
 dim = numel(properties);
 
+numParts = zeros(dim,1);
+
+for i=1:dim
+    numParts(i) = length(properties{i}.Points);
+end
+
+%% Create points structure
+% Count backwards for preallocation purposes
+id = sum(numParts);
+
+for i=dim:-1:1
+    
+    propPoints = properties{i}.Points;
+    dim2 = length(propPoints);
+    
+    for j = dim2:-1:1
+        % Calculate additional panel properties and assign data to separate
+        % points structure outwith properties cell
+        points(id) = normals(propPoints(j));
+        
+        newProperties{id} = properties{i};
+%         newProperties{id}.Name = points.Name;
+         % Empty points in properties cell as we now have separate points struct
+        newProperties{id}.Points = [];
+        
+        id = id - 1;
+        
+    end
+end
+
+dim = sum(numParts);
+
 bodyPart = true(dim,1);
-[numParts,impactMethod,shadowMethod,partType] = deal(zeros(dim,1));
+[impactMethod,shadowMethod,partType] = deal(zeros(dim,1));
 
 partType = string(partType);
 
 %% Prediction method matrices
 % Numbers correspond to switch case in parent function (aeroprediction)
 for i=1:dim
-    propPoints = properties{i}.Points;
-    numParts(i) = length(propPoints);
-    partType(i) = propPoints.Name;
+    partType(i) = newProperties{i}.Name;
+%     partType(i) = propPoints.Name;
     
     % Prediction method mixer: Change method via aeroprediction
     % Impact:   1 - Modified Newtonian
@@ -28,7 +59,7 @@ for i=1:dim
     % Shadow:   1 - Newtonian/Base Pressure
     %           2 - Prandtl-Meyer
     switch partType(i)
-        case "aerofoil"
+        case {"aerofoil","wing","tail"}
             
             bodyPart(i) = false;
             impactMethod(i) = 1;
@@ -56,24 +87,5 @@ for i=1:dim
             
     end 
 end
-    
-%% Create points structure
-% Count backwards for preallocation purposes
-id = sum(numParts);
 
-for i=dim:-1:1
-    
-    propPoints = properties{i}.Points;
-    dim2 = length(propPoints);
-    
-    for j = dim2:-1:1
-        % Calculate additional panel properties and assign data to separate
-        % points structure outwith properties cell
-        points(id) = normals(propPoints(j));
-        id = id - 1;
-        
-    end
-    
-    % Empty points in properties cell as we now have separate points struct
-    properties{i}.Points = [];
 end

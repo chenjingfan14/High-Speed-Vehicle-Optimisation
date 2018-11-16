@@ -20,7 +20,7 @@ end
 AftHeight = sum(parPos(:,bodyHeightInd),2); % Used in sym equations
 
 %% Conditioning Loop
-for i = 1:dim
+for i = 1:dim    
     
     [targArray,consArray,settoArray,equation] = deal(cond{i,2:5});
     
@@ -28,8 +28,14 @@ for i = 1:dim
         [~,numCons] = size(consArray);
         switch numCons
             case 0
-                target = parPos(:,targArray); % Used in sym equation
-                funAns = double(subs(str2sym(equation)));
+                target = parPos(:,targArray);
+                
+                if contains(equation,"floor")
+                    funAns = floor(target);
+                elseif contains(equation,"ceil")
+                    funAns = ceil(target);
+                end
+                
                 parPos(:,targArray) = funAns;
                 
             case 1
@@ -39,24 +45,49 @@ for i = 1:dim
                     constraint = parPos(:,consArray); % Used in sym equations
                     setto = parPos(:,settoArray);
                 else
+                    constraint = consArray;
                     setto = settoArray;
                 end
                 
-                comp = size(target);
-                if ~isequal(size(setto),comp)
-                    setto = repmat(setto,comp);
+                [rows,cols] = size(target);
+                if ~isequal(size(setto,1),rows)
+                    setto = repmat(setto,rows,1);
+                end
+                if ~isequal(size(constraint,1),rows)
+                    constraint = repmat(constraint,rows,1);
                 end
                 
-                if contains(equation,["<",">","=="])
-                    funAns = logical(subs(str2sym(equation)));
-                    target(~funAns) = setto(~funAns);
+                if ~isequal(size(setto,2),cols)
+                    setto = repmat(setto,1,cols);
+                end
+                if ~isequal(size(constraint,2),cols)
+                    constraint = repmat(constraint,1,cols);
+                end
+                
+                if contains(equation,"<")
+                    satisfied = target < constraint;
+                    target(~satisfied) = setto(~satisfied);
+                elseif contains(equation,">")
+                    satisfied = target > constraint;
+                    target(~satisfied) = setto(~satisfied);
                 end
                 
                 parPos(:,targArray) = target;
                 
             otherwise
                 counter = 1;
+                
+                % For occasions where multiple conditions are present.
+                % Currently these occasions are assumed only to be when
+                % such conditions are based on other particle parameters,
+                % ie. can only be indexes, not arbitrary number constraints
                 for j = targArray
+                    
+                    if isnan(consArray(counter))
+                        counter = counter + 1;
+                        continue
+                    end
+                    
                     target = parPos(:,j);
                     
                     if contains(equation,"constraint")
@@ -66,14 +97,27 @@ for i = 1:dim
                         setto = settoArray(:,counter);
                     end
                     
-                    comp = size(target);
-                    if ~isequal(size(setto),comp)
-                        setto = repmat(setto,comp);
+                    [rows,cols] = size(target);
+                    if ~isequal(size(setto,1),rows)
+                        setto = repmat(setto,rows,1);
+                    end
+                    if ~isequal(size(constraint,1),rows)
+                        constraint = repmat(constraint,rows,1);
+                    end
+
+                    if ~isequal(size(setto,2),cols)
+                        setto = repmat(setto,1,cols);
+                    end
+                    if ~isequal(size(constraint,2),cols)
+                        constraint = repmat(constraint,1,cols);
                     end
                     
-                    if contains(equation,["<",">","=="])
-                        funAns = logical(subs(str2sym(equation)));
-                        target(~funAns) = setto(~funAns);
+                    if contains(equation,"<")
+                        satisfied = target <= constraint;
+                        target(~satisfied) = setto(~satisfied);
+                    elseif contains(equation,">")
+                        satisfied = target >= constraint;
+                        target(~satisfied) = setto(~satisfied);
                     end
                     
                     parPos(:,j) = target;

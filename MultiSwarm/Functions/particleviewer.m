@@ -2,7 +2,7 @@ function particleviewer(assemblyProperties,num)
 
 prev = 0;
 dimArray = zeros(100,1);
-assemblyPoints = struct('Name', [], 'x', [], 'y', [], 'z', [], 'xyz', []);
+assemblyPoints = struct('x', [], 'y', [], 'z', [], 'xyz', []);
 for i=1:length(assemblyProperties)
     dim = (1:length(assemblyProperties{i}.Points))+prev;
     assemblyPoints(dim) = [assemblyProperties{i}.Points];

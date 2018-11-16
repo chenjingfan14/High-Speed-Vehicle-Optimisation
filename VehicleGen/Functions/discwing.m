@@ -3,6 +3,7 @@ function new = discwing(old)
 new = old;
 target = old.delta;
 dim1 = length(new);
+controlSurf = new.Control.Surf;
 
 for ii=1:dim1
     
@@ -41,12 +42,16 @@ for ii=1:dim1
             numPanel = [fliplr(real), real];
         end
         
+        numPanel(numPanel == 0) = 1;
+        
     end
     
     % Points = Total number of panels + 1
-    cols = sum(numPanel)+1;
+    col = sum(numPanel)+1;
     
-    [xp,yp,zp] = deal(zeros(rows,cols));
+    newControl = false(1,(col+1)/2);
+    
+    [xp,yp,zp] = deal(zeros(rows,col));
     [dim,count] = deal(1);
     
     for j=1:c1-1
@@ -63,21 +68,46 @@ for ii=1:dim1
         %% Find intermediate yz-coords
         y0 = y(:,j);
         y1 = y(:,j+1);
-        yi = y0 + (y1 - y0).*(panelArray/panels);
+        
+        if all(y0 == y1)
+            yi = repmat(y0,1,panels+1);
+        else
+            yi = y0 + (y1 - y0).*(panelArray/panels);
+        end
         
         z0 = z(:,j);
         z1 = z(:,j+1);
-        zi = z0 + (z1 - z0).*(panelArray/panels);
+        
+        if all(z0 == z1)
+            zi = repmat(z0,1,panels+1);
+        else
+            zi = z0 + (z1 - z0).*(panelArray/panels);
+        end
         
         %% x-coords based on combination of y and z
         
-        yz0 = (y0.^2 + z0.^2).^0.5;
-        yz1 = (y1.^2 + z1.^2).^0.5;
-        yzi = yz0 + (yz1 - yz0).*(panelArray/panels);
+        x0 = x(:,j);
+        x1 = x(:,j+1);
         
-        xi = x(:,j) + (yzi - yz0).*((x(:,j+1) - x(:,j))./(yz1 - yz0));
+        if all(x0 == x1)
+            xi = repmat(x0,1,panels+1);
+        else
+            yz0 = (y0.^2 + z0.^2).^0.5;
+            yz1 = (y1.^2 + z1.^2).^0.5;
+            yzi = yz0 + (yz1 - yz0).*(panelArray/panels);
+            xi = x(:,j) + (yzi - yz0).*((x(:,j+1) - x(:,j))./(yz1 - yz0));
+        end
         
-        cols = panelArray + dim;
+        if  j < c1/2 && controlSurf(count)
+            newControl(cols) = true;
+        end
+        
+        if panels == 0
+            cols = dim+1;
+        else
+            cols = panelArray + dim;
+        end
+        
         
         xp(:,cols) = xi;
         yp(:,cols) = yi;
@@ -87,7 +117,13 @@ for ii=1:dim1
         count = count + 1;
     end
     
+    first = find(newControl,1,'first');
+%     last = find(newControl,1,'last');
+%     newControl([first last]) = false;
+    newControl(first) = false;
+
     %% Update points to include discretisation
+    new(ii).Control.Surf = [newControl, fliplr(newControl)];
     
     new(ii).Points.x = xp;
     new(ii).Points.y = yp;

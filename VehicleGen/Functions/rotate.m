@@ -13,9 +13,9 @@ for ii=1:length(partArray)
     y = part.y;
     z = part.z;
     
-    xrot = (x*cosd(alpha) + z*sind(alpha)) + rotCentre;
+    xrot = (x*cos(alpha) + z*sin(alpha)) + rotCentre;
     yrot = y;
-    zrot = z*cosd(alpha) - x*sind(alpha);
+    zrot = z*cos(alpha) - x*sin(alpha);
     
     [dim1,dim2] = size(x);
     

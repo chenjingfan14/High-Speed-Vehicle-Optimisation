@@ -1,66 +1,73 @@
-function flow = flowparameters(AoA,M)
+function flow = flowparameters(alpha,Mach,alt,delta)
 %% Flow conditions 
 
-if nargin > 0 && ~isempty(AoA)
-    alpha = AoA;
+if nargin > 0 && ~isempty(alpha)
 else
     alpha = -4:4:24;
+    alpha = 0;
 end
 
-if nargin > 1 && ~isempty(M)
-    Minf = M;
+if nargin > 1 && ~isempty(Mach)
 else
-    Minf = [4.63];
+    Mach = [4.63];
 end
 
-if ~isequal(size(alpha),size(Minf))
-    MinfArray = reshape(Minf,1,[]);
-    alphaArray = reshape(alpha,[],1);
-    
-    Minf = repmat(MinfArray,size(alphaArray));
-    alpha = repmat(alphaArray,size(MinfArray));
+if nargin > 2 && ~isempty(alt)
+else
+    alt = [32850];
 end
 
-[row,col] = size(alpha);
+if nargin > 3 && ~isempty(delta)
+else
+    delta = [5];
+end
 
-alt = 32850;
+alphaDim = numel(alpha);
+MinfDim = numel(Mach);
+altDim = numel(alt);
+deltaDim = numel(delta);
+
+parameterIndex = fullfact([alphaDim,MinfDim,altDim,deltaDim]);
+
+[row,~] = size(parameterIndex);
+
 gamma = 1.4;
 R = 287;
 
 % Freestream stagnation pressure ratio
-Pinf_P0 = (2./((gamma+1)*(Minf.^2))).^(gamma/(gamma-1)) .* (((2*gamma*(Minf.^2))-(gamma-1))/(gamma+1)).^(1/(gamma-1));
+Pinf_P0 = (2./((gamma+1)*(Mach.^2))).^(gamma/(gamma-1)) .* (((2*gamma*(Mach.^2))-(gamma-1))/(gamma+1)).^(1/(gamma-1));
 
-% Find Newtonian/PMe matching point
-[dim1,dim2] = size(Minf);
-
-for i = dim1:-1:1
-    for j = dim2:-1:1
-        [matchdel(i,j),matchMach(i,j)] = matchingPoint(gamma,Pinf_P0(i,j));
-    end
+for i = MinfDim:-1:1
+    [matchdel(i),matchMach(i)] = matchingPoint(gamma,Pinf_P0(i));
 end
 
-hvals = atmosphere(alt,0,0); % Find flow parameters
+for i = altDim:-1:1
+    hvals = atmosphere(alt(i),0,0); % Find flow parameters
+    
+    Tinf(i) = hvals(1); % Freestream temperature
+    rho(i) = hvals(2); % Freestream density
+    Pinf(i) = hvals(7); % Freestream pressure
+    a(i) = hvals(5); % Speed of sound
+    mu(i) = hvals(8); % Dynamic viscosity
+    kt(i) = hvals(10); % Thermal conductivity
 
-a = hvals(5); % Speed of sound
-mu = hvals(8); % Dynamic viscosity
-kt = hvals(10); % Thermal conductivity
-Uinf = Minf*a;
+    cp = R*gamma/(gamma-1);
+    Pr(i) = mu*cp/kt;
+end
 
-cp = R*gamma/(gamma-1);
-Pr = mu*cp/kt;
-
+flow.ParameterIndex = parameterIndex;
 flow.alpha = alpha;
-flow.Minf = Minf;
+flow.Minf = Mach;
+flow.delta = delta;
 flow.gamma = gamma;
-flow.Uinf = Uinf;
-flow.Pinf = hvals(7);
-flow.Tinf = hvals(1);
+flow.Pinf = Pinf;
+flow.Tinf = Tinf;
 flow.R = R;
 flow.Pr = Pr;
-flow.rho = hvals(2);
-flow.mu = hvals(8);
+flow.rho = rho;
+flow.mu = mu;
 flow.a = a;
 flow.delq = matchdel;
 flow.Machq = matchMach;
-flow.runs = row*col;
-flow.dim = [row,col];
+flow.Dim = [row,1];
+flow.Runs = row;

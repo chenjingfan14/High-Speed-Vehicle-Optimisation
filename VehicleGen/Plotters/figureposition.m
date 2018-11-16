@@ -26,7 +26,8 @@ switch lowestWhole
         pos = [640, 40, 640, 440];
     case 6
         pos = [1280, 40, 640, 440];
-        
+
+    %% If above plots off screen, try this
 %     case 1
 %         pos = [0, -150, 640, 440];
 %     case 3 

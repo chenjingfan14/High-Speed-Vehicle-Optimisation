@@ -4,6 +4,7 @@ wing = false;
 aft = false;
 fore = false;
 nose = false;
+control = false;
 
 [dim,~] = size(cond);
 uniqueDim = size(unique(varArray));
@@ -62,6 +63,18 @@ for i = 1:dim
             n = size(array);
             partArrays{fore,2} = [partArrays{fore,2} repmat(name,n)];
             partArrays{fore,3} = [partArrays{fore,3} array];
+            
+        case {"ControlChord","ControlSpan"}  
+            
+            if ~control
+                j = j + 1;
+                control = j;
+                partArrays{control,1} = "Control";
+            end
+            
+            n = size(array);
+            partArrays{control,2} = [partArrays{control,2} repmat(name,n)];
+            partArrays{control,3} = [partArrays{control,3} array];
             
         otherwise
             

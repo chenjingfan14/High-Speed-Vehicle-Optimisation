@@ -1,6 +1,7 @@
 classdef wingtail
     
     properties
+        Name
         Conical = false
         delta = 0.1
         Offset
@@ -11,18 +12,20 @@ classdef wingtail
         Chord
         Area
         Span
+        Dihedral
         MAC
         WetChord
         WetArea
         WetSpan
         WetMAC
         Partitions
+        Control
         Boolean
         
     end
     
     methods
-        function obj=wingtail(dihedral,semispan,chord,sweep,offset,sections)
+        function obj=wingtail(dihedral,semispan,chord,sweep,offset,sections,control)
             
             % If any aerofoil section span = 0, delete all corresponding partition
             % properties
@@ -45,11 +48,11 @@ classdef wingtail
             
             xPanels = obj.xPanels;
             X = (0:xPanels)';
-            c = chord;
-            partitions = sum(semispan>0);
+            nParts = sum(semispan>0);
+            nSecs = nParts + 1;
             
-            [bh,Area,cbar] = deal(zeros(1,partitions));
-            xLE = zeros(1,partitions+1);
+            [Area,cbar] = deal(zeros(1,nParts));
+            [bh,xLE] = deal(zeros(1,nParts+1));
             
             % Is aerofoil vertical tail
             di = dihedral*pi/180;
@@ -58,28 +61,17 @@ classdef wingtail
             Lam = sweep*pi/180;
             picker = obj.Distribution;
             
-            prev=0;
-            for i=1:partitions
-                bh(i) = prev+semispan(i);
-                xLE(i+1) = xLE(i)+semispan(i)*tan(Lam(i));
-                Area(i) = ((c(i+1)+c(i))/2)*semispan(i);
-                Taper = c(i+1)/c(i);
+            for i=1:nParts
+                bh(i+1) = bh(i) + semispan(i);
+                xLE(i+1) = xLE(i) + semispan(i)*tan(Lam(i));
+                Area(i) = 0.5*(chord(i+1) + chord(i)) * semispan(i);
+                Taper = chord(i+1)/chord(i);
                 if Taper == inf
                     Taper = 0;
                 end
-                cbar(i) = (2/3)*c(i)*((1+Taper+(Taper^2))/(1+Taper));
-                
-                prev = bh(i);
+                cbar(i) = (2/3)*chord(i)*((1 + Taper + (Taper^2))/(1 + Taper));
                 
             end
-            
-            obj.Area = Area;
-            obj.WetArea = Area;
-            obj.MAC = cbar;
-            obj.WetMAC = cbar;
-            
-            y = [0,bh]*cos(di);
-            z = offset(2)+([0,bh]*sin(di));
             
             %% Wing x-distribution
             switch picker
@@ -93,9 +85,9 @@ classdef wingtail
             
             %% Aerofoil Section x-Discretisation
             
-            [FoilUp,FoilLo] = deal(zeros(size(xnorm,1),partitions+1));
+            [FoilUp,FoilLo] = deal(zeros(size(xnorm,1),nParts+1));
 
-            for i=1:length(sections)
+            for i=1:nSecs
                 
                 Sec = sections{i};
                 
@@ -111,14 +103,75 @@ classdef wingtail
                 FoilLo(:,i) = interp1(lower(:,1),lower(:,2),xnorm,'pchip');
             end
             
+            %% Control surfaces
+            if nargin == 7
+                
+                bhControl = (sum(semispan) * control([1 2]));
+                
+                % Need two to avoid control surface deflection affecting
+                % non-control surface partitions
+                bhControl = repmat(bhControl,1,2);
+                
+                [bhSort,IDorder] = sort([bh, bhControl]);
+                
+                controlChords = interp1(bh,chord,bhControl);
+                chord = [chord, controlChords];
+                chord = chord(IDorder);
+                
+                semispan = diff(bhSort);
+                
+                controlxLE = interp1(bh,xLE,bhControl);
+                xLE = [xLE, controlxLE];
+                xLE = xLE(IDorder);
+                
+                controlFoilUp = interp1(bh,FoilUp',bhControl)';
+                
+                FoilUp = [FoilUp, controlFoilUp];
+                FoilUp = FoilUp(:,IDorder);
+                
+                controlFoilLo = interp1(bh,FoilLo',bhControl)';
+                
+                FoilLo = [FoilLo, controlFoilLo];
+                FoilLo = FoilLo(:,IDorder);
+                 
+                % Including control spans into full config and sorting
+                bh = bhSort;
+                
+                % Rewrite control chords to logical stating which defined
+                % partitions are part of control surface
+                controlSurf = bh >= bhControl(1) & bh <= bhControl(2);
+                
+                first = find(controlSurf,1,'first');
+                last = find(controlSurf,1,'last');
+                
+                % Remove duplicate control surface chords from control
+                % surface so that one (non-control surface) is lofted into
+                % the other (begin/end control surface)
+                controlSurf([first last]) = false; 
+                
+                [~,ID] = min(abs(control(3) - xnorm));
+                
+                xnorm = repmat(xnorm,1,max(IDorder));
+                
+                obj.Control.ChordID = ID;
+                obj.Control.Surf = controlSurf;
+            else
+                obj.Control.ChordID = 0;
+                obj.Control.Surf = zeros(nSecs,1);
+            end
+            
+            %%
+            
+            z = offset(2) + (bh * sin(di));
+            
             % Calculates all xpoints with leading edge sweep offset
-            [x_u,x_l] = deal(xnorm*c + xLE);
+            [x_u,x_l] = deal(xnorm.*chord + xLE);
             
             if di < pi/4 && di > -pi/4
-                y_u = y+FoilUp*-sin(di).*c;
-                z_u = z+FoilUp*cos(di).*c;
-                y_l = y+FoilLo*-sin(di).*c;
-                z_l = z+FoilLo*cos(di).*c;
+                y_u = bh + FoilUp * -sin(di) .* chord;
+                z_u = z + FoilUp * cos(di) .* chord;
+                y_l = bh + FoilLo * -sin(di) .* chord;
+                z_l = z + FoilLo * cos(di) .* chord;
                 
                 % Interp/Extrapolate to align root with centreline
                 if di~=0
@@ -144,20 +197,26 @@ classdef wingtail
                 wing.x = x_l;
                 wing.y = y_l;
                 wing.z = z_l;
+                obj.Name = "tail";
             else
                 wing.x = [x_u, fliplr(x_l)];
                 wing.y = [y_u, fliplr(y_l)];
                 wing.z = [z_u, fliplr(z_l)];
+                obj.Name = "wing";
             end
             
             obj.Chord = chord;
             obj.WetChord = chord;
             obj.Span = semispan;
             obj.WetSpan = semispan;
+            obj.Area = Area;
+            obj.WetArea = Area;
+            obj.MAC = cbar;
+            obj.WetMAC = cbar;
+            obj.Dihedral = di;
             obj.Offset = offset;
             obj.Points = xyztopoints(wing);
-            obj.Points.Name = "aerofoil";
-            obj.Partitions = partitions;
+            obj.Partitions = nParts;
             obj.Boolean = boolean;
             
             %%

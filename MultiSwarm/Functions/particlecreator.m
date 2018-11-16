@@ -7,7 +7,7 @@ function [assemblyProperties,parameters,flag] = particlecreator(configPos,partAr
 % Initialise existence of parts as false
 [dim,~] = size(partArrays);
 
-[wingCon,aftbodyCon,forebodyCon,noseCon] = deal(false(dim,1));
+[wingCon,aftbodyCon,forebodyCon,noseCon,controlCon] = deal(false(dim,1));
 
 % Loop through configuration and set parts to true at that point in the 
 % configuration cell when part name = "Wing" or "Nose" etc
@@ -16,6 +16,7 @@ for ii = 1:dim
     aftbodyCon(ii) = strcmp(partArrays{ii,1},"Aftbody");
     forebodyCon(ii) = strcmp(partArrays{ii,1},"Forebody");
     noseCon(ii) = strcmp(partArrays{ii,1},"Nose");
+    controlCon(ii) = strcmp(partArrays{ii,1},"Control");
 end
 
 % Turn 1:dim logicals into indexes containing only numbers where said part
@@ -25,6 +26,7 @@ wingDim = array(wingCon);
 aftbodyDim = array(aftbodyCon);
 forebodyDim = array(forebodyCon);
 noseDim = array(noseCon);
+controlDim = array(controlCon);
 
 %% Create aerofoils
 % If no aerofoils in configuration, loop will be skipped as dim = 0
@@ -47,7 +49,14 @@ for ii=wingDim:-1:1
     offset = wingPos(any(wingStr == ["xOffset","zOffset"]',1));
     
     % Create aerofoil
-    liftSurface(ii) = wingtail(dihedral,semispan,chord,sweep,offset,sections);
+    if isempty(controlDim)
+        liftSurface(ii) = wingtail(dihedral,semispan,chord,sweep,offset,sections);
+    else
+        controlArray = partArrays{controlDim,3};
+        control = configPos(controlArray);
+        liftSurface(ii) = wingtail(dihedral,semispan,chord,sweep,offset,sections,control);
+    end
+    
 end
 
 %% Create body and assemble
@@ -123,6 +132,9 @@ end
 
 %% New wing discretisation
 if any(wingCon) % Aerofoil(s)
+%     surfaceParameters = [0.5,0.8,0.7];
+%     
+%     liftSurface = controlsurface(liftSurface,surfaceParameters);
     
     % Discretise aerofoils based on target length
     liftSurface = discwing(liftSurface);

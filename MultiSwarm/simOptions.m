@@ -16,3 +16,6 @@ options.shielding = false;
 
 % Viscous capability still being created, leave false
 options.viscous = true;
+
+% Include control surfaces in optimisation
+options.control = false;
