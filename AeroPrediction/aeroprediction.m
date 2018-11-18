@@ -271,7 +271,7 @@ for i=1:runs
         %% Wing bending moment
         % Only call if part is first aerofoil (wing should always be set up
         % to be first aerofoil in configuration)
-        if any(partProp.Name == ["aerofoil","Wing"]) && foilCount == 1
+        if any(partProp.Name == ["aerofoil","wing"]) && foilCount == 1
             rootMoment(i) = wingbending(Cp,rotPoints(j),run);
         end
         %% Shielding
@@ -407,9 +407,14 @@ if any(numFoils)
     % high/low
     constrain = [moment,cop];
     minVal = [0,0];
-    maxVal = [inf,inf];
+    maxVal = [lift,0.5];
     
     penalty = violation(constrain,minVal,maxVal);
+    
+    % Check magnitude of penalty
+%     if any(penalty)
+%         penalty 
+%     end
     
     cost = [1/lift,Cdbar] + penalty;
     

@@ -1,4 +1,4 @@
-function [nonDomFit,nonDomPos] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
+function [nonDomFit,nonDomPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
 %% Multi Objective Particle Swarm Optimiser
 % Main program, initialises swarm based on minimum/maximum design variables
 % Uses cost function values to update swarm positions throughout process
@@ -20,6 +20,8 @@ varMinMat = repmat(varMin,nPop,1);
 varMaxMat = repmat(varMax,nPop,1);
 
 varSize = [nPop nVar];
+
+history = zeros(maxIt, nFun + 2);
 
 %% Initialise Swarm
 
@@ -128,6 +130,8 @@ limits = zeros([plotFun 2]); % Initialise limits for graph output
 nonDomFitBar = mean(initPFDisp,1);
 str = repmat('%3.4f ', 1, nFun);
 fprintf(['Iteration %i: Mean PF f(x): ' str ' Success rate: %3.2f \n'], 0, nonDomFitBar, (successCount/nPop)*100);
+
+history(1,:) = [1, nonDomFitBar, (successCount/nPop)*100];
 
 %% Main PSO Loop
 for it = 2:maxIt+1
@@ -272,6 +276,8 @@ for it = 2:maxIt+1
     
     nonDomFitBar = mean(nonDomFitDisp,1);
     fprintf(['Iteration %i: Mean PF f(x): ' str ' Success rate: %3.2f \n'], it-1, nonDomFitBar, (successCount/nPop)*100);
+    
+    history(it,:) = [it-1, nonDomFitBar, (successCount/nPop)*100];
     
     if mod(it-1,fi)==0
         maxf = max([nonDomFitDisp; initPFDisp]);

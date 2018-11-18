@@ -3,22 +3,27 @@ clear all
 close all
 clc
 
+tic
+
 addpath(genpath('MultiSwarm'))
 addpath(genpath('VehicleGen'))
 addpath(genpath('AeroPrediction'))
 
-options = simOptions();
+% Number of processors to be used (up to 4 on desktop)
+nProc = 10;
+
+options = simOptions(nProc);
 Bezier = options.Bezier;
 control = options.control;
 
 if options.parallel
-    parpool('local',4)
+    parpool('local',nProc)
 end
 
 % Swarm size (must be divisible by 2 & 3 for global best and mutation
 % subsets in MOPSO)
-nPop = 30;
-maxIt = 3; % Maximum number of iterations
+nPop = 1000;
+maxIt = 5000; % Maximum number of iterations
 
 w = 0.3; % Intertia coeff
 c1 = 1.49; % Personal acceleration coeff
@@ -199,20 +204,24 @@ if nFun == 1
     % Max stall values before simulation ends
     maxStall = 500;
     
-    [GlobalBestFit,GlobalBestPos] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 else    
     
     inv = false(1,nFun);
     inv = logical(inv);
-    maxPF = nPop; % Maximum number of Pareto Front values
+    maxPF = 100; % Maximum number of Pareto Front values
     mutProb = 1/nVar; % Probability of mutation
     
-    [GlobalBestFit,GlobalBestPos] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    [GlobalBestFit,GlobalBestPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 end
 
 if options.parallel
     delete(gcp('nocreate'));
 end
+
+time = toc;
+
+save('OptimisationResults')
 
 % Use this function to create output plots of configurations
 viewcaller(GlobalBestPos,cond,varArray,foilData,n,flow,options);

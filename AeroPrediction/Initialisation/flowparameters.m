@@ -4,7 +4,7 @@ function flow = flowparameters(alpha,Mach,alt,delta)
 if nargin > 0 && ~isempty(alpha)
 else
     alpha = -4:4:24;
-    alpha = 0;
+%     alpha = 0;
 end
 
 if nargin > 1 && ~isempty(Mach)
@@ -19,7 +19,7 @@ end
 
 if nargin > 3 && ~isempty(delta)
 else
-    delta = [5];
+    delta = [0];
 end
 
 alphaDim = numel(alpha);

@@ -1,7 +1,11 @@
-function options = simOptions()
+function options = simOptions(nProc)
 
-% For parallel processing set as true, otherwise false
-options.parallel = false;
+if nProc > 1
+    options.parallel = true;
+else
+    % For parallel processing set as true, otherwise false
+    options.parallel = false;
+end
 
 % Use Bezier splines for 2D aerofoil definition, else use preloaded data
 % files
@@ -18,4 +22,4 @@ options.shielding = false;
 options.viscous = true;
 
 % Include control surfaces in optimisation
-options.control = false;
+options.control = true;
