@@ -11,12 +11,12 @@ function [assemblyProperties,parPos,configPos,parameters,success] = particlecrea
 
 % Loop through configuration and set parts to true at that point in the 
 % configuration cell when part name = "Wing" or "Nose" etc
-for ii = 1:dim
-    wingCon(ii) = strcmp(partArrays{ii,1},"Wing") | strcmp(partArrays{ii,1},"Tail");
-    aftbodyCon(ii) = strcmp(partArrays{ii,1},"Aftbody");
-    forebodyCon(ii) = strcmp(partArrays{ii,1},"Forebody");
-    noseCon(ii) = strcmp(partArrays{ii,1},"Nose");
-    controlCon(ii) = strcmp(partArrays{ii,1},"Control");
+for i = 1:dim
+    wingCon(i) = strcmp(partArrays{i,1},"Wing") | strcmp(partArrays{i,1},"Tail");
+    aftbodyCon(i) = strcmp(partArrays{i,1},"Aftbody");
+    forebodyCon(i) = strcmp(partArrays{i,1},"Forebody");
+    noseCon(i) = strcmp(partArrays{i,1},"Nose");
+    controlCon(i) = strcmp(partArrays{i,1},"Control");
 end
 
 % Turn 1:dim logicals into indexes containing only numbers where said part
@@ -31,7 +31,7 @@ controlDim = array(controlCon);
 %% Create aerofoils
 % If no aerofoils in configuration, loop will be skipped as dim = 0
 % Count back from number of aerofoils for preallocation purposes
-for ii=wingDim:-1:1
+for i=wingDim:-1:1
     
     % Initialise what indices of configPos refer to wing, along with what 
     % each position physcially is (eg. "Chord", "Semispan" etc)
@@ -50,7 +50,8 @@ for ii=wingDim:-1:1
     
     if attempt > 1
         
-        ID = find(partArrays{wingDim,2} == "Chord",1,'first');
+        chordID = partArrays{wingDim,2} == "Chord";
+        ID = find(chordID,1,'first');
         
         % Alter physical chord to be created
         Cr = chord(1);
@@ -58,20 +59,32 @@ for ii=wingDim:-1:1
         chord(1) = Cr;
         
         % Alter particle chord, feedback both to costcaller
-        parCr = parPos(ID);
-        parCr = parCr - 0.1*parCr;
+        parChord = parPos(chordID);
         
-        parPos(ID) = parCr;
-        configPos(ID) = Cr;
+        parCr = parChord(1);
+        parCr = parCr - 0.1*parCr;
+        parChord(1) = parCr;
+        
+        % Enforce taper <= 1
+        for j = 2:numel(chord)
+             if chord(j) > chord(j-1)
+                 chord(j) = chord(j-1);
+                 parChord(j) = parChord(j-1);
+             end
+        end
+        
+        parPos(chordID) = parChord;
+        configPos(chordID) = chord;
+        
     end
     
     % Create aerofoil
     if isempty(controlDim)
-        liftSurface(ii) = wingtail(dihedral,semispan,chord,sweep,offset,sections);
+        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,offset,sections);
     else
         controlArray = partArrays{controlDim,3};
         control = configPos(controlArray);
-        liftSurface(ii) = wingtail(dihedral,semispan,chord,sweep,offset,sections,control);
+        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,offset,sections,control);
     end
     
 end

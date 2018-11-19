@@ -407,7 +407,7 @@ if any(numFoils)
     % high/low
     constrain = [moment,cop];
     minVal = [0,0];
-    maxVal = [lift,0.5];
+    maxVal = [inf,0.5];
     
     penalty = violation(constrain,minVal,maxVal);
     

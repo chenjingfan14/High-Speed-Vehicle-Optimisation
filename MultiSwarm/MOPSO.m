@@ -92,6 +92,9 @@ if nNonDomParticles > maxPF
     nonDomFit = nonDomFit(csort(dim,1),:);
     nonDomPos = nonDomPos(csort(dim,1),:);
     parsDominated = parsDominated(csort(dim,1));
+    
+    nNonDomParticles = maxPF;
+    
 end
 
 % Initial Pareto Front = initial non-dominated particles
@@ -243,6 +246,9 @@ for it = 2:maxIt+1
         nonDomFit = nonDomFit(csort(dim,1),:);
         nonDomPos = nonDomPos(csort(dim,1),:);
         parsDominated = parsDominated(csort(dim,1));
+        
+        nNonDomParticles = maxPF;
+        
     end
     
     %% Display

@@ -22,8 +22,8 @@ end
 
 % Swarm size (must be divisible by 2 & 3 for global best and mutation
 % subsets in MOPSO)
-nPop = 1000;
-maxIt = 5000; % Maximum number of iterations
+nPop = 30;
+maxIt = 100; % Maximum number of iterations
 
 w = 0.3; % Intertia coeff
 c1 = 1.49; % Personal acceleration coeff
@@ -117,7 +117,7 @@ maxSec = repmat(maxSec,1,n+1);
 %% Wing Only
 varMin = [0, 0.5,0.1,0.1,0.1, 0,0,0, 2,0,0, minSec, 0,-0.5,... % Wing
     NaN,NaN,NaN, NaN,NaN,NaN, NaN, NaN,NaN,NaN, NaN]; % Body
-varMax = [20, 1,1,1,1, 45,45,45, 5,2,2, maxSec, 0.5,0,...
+varMax = [20, 1,1,1,1, 80,60,60, 5,2,2, maxSec, 0.5,0,...
     NaN,NaN,NaN, NaN,NaN,NaN, NaN, NaN,NaN,NaN, NaN];
 
 %% Body Only
@@ -205,11 +205,11 @@ if nFun == 1
     maxStall = 500;
     
     [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
-else    
+else
     
     inv = false(1,nFun);
     inv = logical(inv);
-    maxPF = 100; % Maximum number of Pareto Front values
+    maxPF = nPop; % Maximum number of Pareto Front values
     mutProb = 1/nVar; % Probability of mutation
     
     [GlobalBestFit,GlobalBestPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
