@@ -1,29 +1,60 @@
-function [parFit,count] = costcaller(costFun,nPop,nFun,parPos,partArrays,sections,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
+function [parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
 
 % Initialise fitness matrix
 parFit = zeros([nPop, nFun]);
 
-count = 0; % Count successful configuration creations
+% Impose conditions on particles
+Bezier = options.Bezier;
+
+[partArrays,sectionArray] = partIndexing(cond,varArray);
+
+[parPos,physicalPos] = conditioning(parPos,cond,varArray,options);
+
+
+sectionPos = physicalPos(:,sectionArray);
+
+if Bezier
+    % Create 2D aerofoil section Bezier curves from control points
+    sections = Bezier3(sectionPos,n,foilData,nPop);
+else
+    % Assign 2D section matrices to particles. Foils variable = section indices
+    zero = sectionPos == 0;
+    sectionPos(zero) = 1;
+    sections = foilData(sectionPos);
+end
+
 if options.parallel
+    % options.parallel
     parfor i=1:nPop
+        
+        success = false;
+        attempt = 1;
+        
         % Attempt to create configuration
-        [parProperties,parameters,flag] = particlecreator(parPos(i,:),partArrays,sections(i,:));
-        if flag % If unsuccessful, set fitness values to infinity
-            parFit(i,:) = ones(1,nFun)*inf;
-        else % Else use cost function to calculate fitness
-            parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
-            count = count+1;
+        while ~success
+            [parProperties,parPos(i,:),physicalPos(i,:),parameters,success] = particlecreator(parPos(i,:),physicalPos(i,:),partArrays,sections(i,:),attempt);
+            attempt = attempt + 1;
         end
+        
+        % End use cost function to calculate fitness
+        parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+        
     end
 else % Same as above but for single-core processing
     for i=1:nPop
-        [parProperties,parameters,flag] = particlecreator(parPos(i,:),partArrays,sections(i,:));
-        if flag
-            parFit(i,:) = ones(1,nFun)*inf;
-        else
-            parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
-            count = count+1;
+        
+        success = false;
+        attempt = 1;
+        
+        % Attempt to create configuration
+        while ~success
+            [parProperties,parPos(i,:),physicalPos(i,:),parameters,success] = particlecreator(parPos(i,:),physicalPos(i,:),partArrays,sections(i,:),attempt);
+            attempt = attempt + 1;
         end
+        
+        % End use cost function to calculate fitness
+        parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+        
     end
 end
 

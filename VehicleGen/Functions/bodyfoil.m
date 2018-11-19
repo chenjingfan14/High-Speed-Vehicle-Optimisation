@@ -67,7 +67,13 @@ for i=1:numAerofoils
         exteriorPoint = exteriorPoints(ii,:);
         
         inter = planeintersection(norm(j,:),bodyPoints(end,col)',interiorPoint,exteriorPoint,xBody,yBody',zBody',j);
-        if isempty(inter) %|| any(exteriorPoint(2) > yBody) || any(exteriorPoint(3) > zBody)
+        if isempty(inter)
+            
+            % Check what failed config looks like
+            % aerofoil.Points.x = aerofoil.Points.x + aftOffset;
+            % aerofoil.Points.z = aerofoil.Points.z + wingtail.Offset(2);
+            % plotter([aftBody.Points,aerofoil.Points]);
+            
             aerofoil = []; aftBody = [];
             success = false;
             return

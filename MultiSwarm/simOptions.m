@@ -22,4 +22,4 @@ options.shielding = false;
 options.viscous = true;
 
 % Include control surfaces in optimisation
-options.control = true;
+options.control = false;

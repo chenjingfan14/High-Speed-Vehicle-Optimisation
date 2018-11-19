@@ -30,24 +30,8 @@ history = zeros(maxIt, nFun + 2);
 parPos = unifrnd(varMinMat,varMaxMat,varSize);
 parVel = zeros(varSize);
 
-%% Only initialisation part dependent on problem
-% Impose conditions on particles
-Bezier = options.Bezier;
-
-[partArrays,sectionArray] = partIndexing(cond,varArray);
-
-[parPos,physicalPos] = conditioning(parPos,cond,varArray,options);
-
-if Bezier
-    % Create 2D aerofoil section Bezier curves from control points
-    sections = Bezier3(physicalPos(:,sectionArray),n,foilData,nPop);
-else
-    % Assign 2D section matrices to particles. Foils variable = section indices
-    sections = foilData(physicalPos(:,sectionArray));
-end
-
-% Calculate initial fitness functions
-[parFit,successCount] = costcaller(costFun,nPop,nFun,physicalPos,partArrays,sections,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+%% Calculate initial fitness functions
+[parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 
 %%
 % Initialise Pareto Front matrices
@@ -94,7 +78,10 @@ nonDomCrowd = crowder(nonDomFitNorm,maxf,minf,nFun);
 
 % If non-dominated particles > max Pareto Front, discard those which
 % are most crowded
-if size(nonDomCrowd,1) > maxPF
+
+[nNonDomParticles,~] = size(nonDomCrowd);
+
+if nNonDomParticles > maxPF
     dim = (1:maxPF)';
     num = (1:size(nonDomCrowd,1))';
     csort = sortrows([num,nonDomCrowd],2,'descend');
@@ -129,9 +116,9 @@ limits = zeros([plotFun 2]); % Initialise limits for graph output
 % Print iteration, mean for every fitness function, success rate
 nonDomFitBar = mean(initPFDisp,1);
 str = repmat('%3.4f ', 1, nFun);
-fprintf(['Iteration %i: Mean PF f(x): ' str ' Success rate: %3.2f \n'], 0, nonDomFitBar, (successCount/nPop)*100);
+fprintf(['Iteration %i: Mean PF f(x): ' str ' nPF: %i \n'], 0, nonDomFitBar, nNonDomParticles);
 
-history(1,:) = [1, nonDomFitBar, (successCount/nPop)*100];
+history(1,:) = [0, nonDomFitBar, nNonDomParticles];
 
 %% Main PSO Loop
 for it = 2:maxIt+1
@@ -170,20 +157,9 @@ for it = 2:maxIt+1
     parPos(set3,:) = nonunimutation(parPos(set3,:),setSize,nVar,varMinMat(set3,:),varMaxMat(set3,:),mutProb,it-1,maxIt);
     
     %% Only optimisation part dependent on problem
-    % Impose conditions
-    [parPos,phyiscalPos] = conditioning(parPos,cond,varArray,options);
-    
-    if Bezier
-        sections = Bezier3(physicalPos(:,sectionArray),n,foilData,nPop);
-    else
-        sectionPos = phyiscalPos(:,sectionArray);
-        zero = sectionPos == 0;
-        sectionPos(zero) = 1;
-        sections = foilData(sectionPos);
-    end
     
     % Calculate fitness functions
-    [parFit,successCount] = costcaller(costFun,nPop,nFun,phyiscalPos,partArrays,sections,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    [parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
    
     %% Update particle best position
     % If new dominates old: new = best
@@ -254,7 +230,9 @@ for it = 2:maxIt+1
     
     nonDomCrowd = crowder(nonDomFitNorm,maxfi,minfi,nFun);
     
-    if size(nonDomCrowd,1) > maxPF
+    [nNonDomParticles,~] = size(nonDomCrowd);
+    
+    if nNonDomParticles > maxPF
         dim = (1:maxPF)';
         num = (1:size(nonDomCrowd,1))';
         csort = sortrows([num, nonDomCrowd],2,'descend');
@@ -275,9 +253,9 @@ for it = 2:maxIt+1
     nonDomFitDisp(:,inv) = inv(:,inv)./nonDomFitDisp(:,inv);
     
     nonDomFitBar = mean(nonDomFitDisp,1);
-    fprintf(['Iteration %i: Mean PF f(x): ' str ' Success rate: %3.2f \n'], it-1, nonDomFitBar, (successCount/nPop)*100);
+    fprintf(['Iteration %i: Mean PF f(x): ' str ' nPF: %i \n'], it-1, nonDomFitBar, nNonDomParticles);
     
-    history(it,:) = [it-1, nonDomFitBar, (successCount/nPop)*100];
+    history(it,:) = [it-1, nonDomFitBar, nNonDomParticles];
     
     if mod(it-1,fi)==0
         maxf = max([nonDomFitDisp; initPFDisp]);

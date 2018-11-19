@@ -1,4 +1,4 @@
-function [assemblyProperties,parameters,flag] = particlecreator(configPos,partArrays,sections)
+function [assemblyProperties,parPos,configPos,parameters,success] = particlecreator(parPos,configPos,partArrays,sections,attempt)
 %% Assembles arbitrary configuration
 % Will fuse together multiple aerofoil sections with body. Will also work
 % for aerofoil alone or body alone configurations
@@ -48,6 +48,23 @@ for ii=wingDim:-1:1
     semispan = wingPos(wingStr == "Semispan");
     offset = wingPos(any(wingStr == ["xOffset","zOffset"]',1));
     
+    if attempt > 1
+        
+        ID = find(partArrays{wingDim,2} == "Chord",1,'first');
+        
+        % Alter physical chord to be created
+        Cr = chord(1);
+        Cr = Cr - 0.1*Cr;
+        chord(1) = Cr;
+        
+        % Alter particle chord, feedback both to costcaller
+        parCr = parPos(ID);
+        parCr = parCr - 0.1*parCr;
+        
+        parPos(ID) = parCr;
+        configPos(ID) = Cr;
+    end
+    
     % Create aerofoil
     if isempty(controlDim)
         liftSurface(ii) = wingtail(dihedral,semispan,chord,sweep,offset,sections);
@@ -95,10 +112,7 @@ if any(aftbodyCon)
         
         % If joining is unsuccessful, configuration not feasible, stop
         % bodyfoil and return to particlecreator with flag
-        if success
-            flag = false;
-        else
-            flag = true;
+        if ~success
             [assemblyProperties,parameters] = deal([]);
             return
         end

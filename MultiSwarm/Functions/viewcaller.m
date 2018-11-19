@@ -14,10 +14,16 @@ else
 end
 
 for i=1:nPop
-    [assemblyProperties,~,flag] = particlecreator(physicalPos(i,:),partArrays,sections(i,:));
-    if ~flag
-        particleviewer(assemblyProperties,i);
+    success = false;
+    attempt = 1;
+    
+    % Attempt to create configuration
+    while ~success
+        [parProperties,parPos(i,:),physicalPos(i,:),~,success] = particlecreator(parPos(i,:),physicalPos(i,:),partArrays,sections(i,:),attempt);
+        attempt = attempt + 1;
     end
+    
+    particleviewer(parProperties,i);
     
     if rem(i,50) == 0
         i

@@ -15,7 +15,7 @@ N = -(n(:,1).*w(:,1) + n(:,2).*w(:,2) + n(:,3).*w(:,3));
 
 % Compute the Isection parameter
 sI = N ./ D;
-I = round(P0 + sI*u,4);
+I = P0 + sI*u;
 
 conx = I(:,1) >= xBody(1) & I(:,1) <= xBody(2) | I(:,1) >= xBody(2) & I(:,1) <= xBody(1);
 cony = I(:,2) >= yBody(j) & I(:,2) <= yBody(j+1) | I(:,2) >= yBody(j+1) & I(:,2) <= yBody(j);
