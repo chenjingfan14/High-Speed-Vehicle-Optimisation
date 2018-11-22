@@ -1,4 +1,4 @@
-function [aerofoil,aftBody,success] = bodyfoil(aftBody,aerofoil)
+function [aerofoil,aftBody,success,reason] = bodyfoil(aftBody,aerofoil,offset)
 
 %% Get body normals for line-plane intersection (wing-body intersection)
 % Bring in point matrix and x,y,z coordinates of body
@@ -33,24 +33,38 @@ for i=1:numAerofoils
     
     bool = wingtail.Boolean;
     foil = wingtail.Points.xyz;
-    zFoil = wingtail.Points.z;
     
     % Apply foil x-offset wrt aft-body
-    aftOffset = wingtail.Offset(1) + xBody(1);
-    foil(:,1:3:end) = foil(:,1:3:end) + aftOffset;
+    aftOffset = offset(1) + xBody(1);
+    foil(:,1:3:end) = foil(:,1:3:end) - foil(1,1:3:end) + aftOffset;
+    foil(:,3:3:end) = foil(:,3:3:end) - foil(1,3:3:end) + offset(2);
+    
+    zFoil = foil(:,3:3:end);
     
     % Body points between min and max z
     ind = 1:bDim;
     cond = zBody >= min(zFoil(:)) & zBody <= max(zFoil(:));
-    ind(~cond) = [];
     
-    % Upper and lower boundaries of radial body panels to include in plane
-    % intersection calculation ie. potential panels that bridge point could
-    % lie on. Wing not allowed to interfere with first or last radial
-    % panels hence max(...,2), min(...,bDim-2) (Should be bDim-1?)
-    % Pull in additional points just outside min (-1) and max (+1) z
-    ub = max(min(ind)-1,2);
-    lb = min(max(ind)+1,bDim-2);
+    if any(cond)
+        
+        ind(~cond) = [];
+
+        % Upper and lower boundaries of radial body panels to include in plane
+        % intersection calculation ie. potential panels that bridge point could
+        % lie on. Wing not allowed to interfere with first or last radial
+        % panels hence max(...,2), min(...,bDim-2) (Should be bDim-1?)
+        % Pull in additional points just outside min (-1) and max (+1) z
+        ub = max(min(ind)-1,2);
+        lb = min(max(ind)+1,bDim-2);
+        
+    else
+        % Upper/Lower boundaries may be entirely within two radial body
+        % panels, thus no body points between min and max for cond. So
+        % use all radial panels (bar first and last)
+        ub = 2;
+        lb = bDim-2;
+        
+    end
     
     j = ub:lb;
     col = (ub*3)-2:lb*3;
@@ -66,15 +80,14 @@ for i=1:numAerofoils
         interiorPoint = interiorPoints(ii,:);
         exteriorPoint = exteriorPoints(ii,:);
         
-        inter = planeintersection(norm(j,:),bodyPoints(end,col)',interiorPoint,exteriorPoint,xBody,yBody',zBody',j);
+        [inter,reason] = planeintersection(norm(j,:),bodyPoints(end,col)',interiorPoint,exteriorPoint,xBody,yBody',zBody',j);
         if isempty(inter)
             
             % Check what failed config looks like
-            % aerofoil.Points.x = aerofoil.Points.x + aftOffset;
-            % aerofoil.Points.z = aerofoil.Points.z + wingtail.Offset(2);
+            % aerofoil.Points.x = foil(:,1:3:end);
+            % aerofoil.Points.z = foil(:,3:3:end);
             % plotter([aftBody.Points,aerofoil.Points]);
             
-            aerofoil = []; aftBody = [];
             success = false;
             return
         end

@@ -25,56 +25,71 @@ for i=2:dim1
     end
     
     target = strcnt:strcnt+a-1;
-    [constraint,setto,conFun] = deal([]);
+    [Constraint,Setto,conFun] = deal([]);
     
     if con ~= "~"
         
-        if contains(con,"<")
-            condition = ' < ';
-        end
-        if contains(con,">")
-            condition = ' > ';
-        end
-        if contains(con,"==")
-            condition = ' == ';
-        end
-        if contains(con,"Previous")
-            constraint = [NaN, target(1:end-1)];
-            setto = constraint;
-            equation = ['target' condition 'constraint'];
-        end
-        if contains(con,"Next")
-            constraint = [target(2:end), NaN];
-            setto = constraint;
-            equation = ['target' condition 'constraint'];
-        end
-        if contains(con,"Minimum")
+        for ii = numel(con):-1:1
             
-            constraint = regexp(con,'[+-]?\d+\.?\d*', 'match');
-            setto = 0;
-            equation = ['target > ' char(constraint)];
-            constraint = double(constraint);
-        end
-        if contains(con,"Maximum")
+            coni = con(ii);
             
-            constraint = char(regexp(con,'[+-]?\d+\.?\d*', 'match'));
-            equation = ['target < ' char(constraint)];
-            constraint = double(constraint);
+            if contains(coni,"<")
+                condition = ' < ';
+            end
+            if contains(coni,">")
+                condition = ' > ';
+            end
+            if contains(coni,"==")
+                condition = ' == ';
+            end
+            if contains(coni,"sum")
+                constraint = regexp(coni,'[+-]?\d+\.?\d*', 'match');
+                setto = constraint;
+                equation = ['sum(target)' condition char(constraint)];
+                constraint = double(constraint);
+            end
+            if contains(coni,"Previous")
+                constraint = [NaN, target(1:end-1)];
+                setto = constraint;
+                equation = ['target' condition 'constraint'];
+            end
+            if contains(coni,"Next")
+                constraint = [target(2:end), NaN];
+                setto = constraint;
+                equation = ['target' condition 'constraint'];
+            end
+            if contains(coni,"Minimum")
+                
+                constraint = regexp(coni,'[+-]?\d+\.?\d*', 'match');
+                setto = 0;
+                equation = ['target > ' char(constraint)];
+                constraint = double(constraint);
+            end
+            if contains(coni,"Maximum")
+                
+                constraint = regexp(coni,'[+-]?\d+\.?\d*', 'match');
+                equation = ['target < ' char(constraint)];
+                constraint = double(constraint);
+            end
+            if contains(coni,"Floor")
+                equation = 'floor(target)';
+            end
+            
+            Constraint(ii,:) = constraint;
+            Setto(ii,:) = setto;
+            conFun{ii} = equation;
+            
         end
-        if contains(con,"Floor")
-            equation = 'floor(target)';
-        end
-          
-        conFun = equation;
+        
     end
     j = i - 1;
     
     condCell{j,1} = name;
     condCell{j,2} = target;
-    condCell{j,3} = constraint;
-    condCell{j,4} = setto;
-    condCell{j,5} = conFun;
-    strcnt = strcnt+a;
+    condCell{j,3} = Constraint;
+    condCell{j,4} = Setto;
+    condCell{j,5} = string(conFun);
+    strcnt = strcnt + a;
 end
 
 nVar = strcnt - 1;
@@ -93,7 +108,7 @@ for i = j:-1:1
             parPos = ['parPos(:,' num2str(num) ')'];
         end
         
-        equation = ['(' parPos relation ')']; 
+        equation = ['(' parPos relation ')'];
         vars = allwords(relation);
         
         for ii = length(vars):-1:1

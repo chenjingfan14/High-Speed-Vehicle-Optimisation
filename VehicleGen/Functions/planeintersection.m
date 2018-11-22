@@ -1,4 +1,7 @@
-function intersection = planeintersection(n,V0,P0,P1,xBody,yBody,zBody,j)
+function [intersection,reason] = planeintersection(n,V0,P0,P1,xBody,yBody,zBody,j)
+
+intersection = [];
+reason = [];
 
 dim = length(V0);
 
@@ -21,16 +24,56 @@ conx = I(:,1) >= xBody(1) & I(:,1) <= xBody(2) | I(:,1) >= xBody(2) & I(:,1) <= 
 cony = I(:,2) >= yBody(j) & I(:,2) <= yBody(j+1) | I(:,2) >= yBody(j+1) & I(:,2) <= yBody(j);
 conz = I(:,3) >= zBody(j) & I(:,3) <= zBody(j+1) | I(:,3) >= zBody(j+1) & I(:,3) <= zBody(j);
 
-I = I(conx & cony & conz,:);
+inter = I(conx & cony & conz,:);
 
-if isempty(I)
-    intersection = [];
+if isempty(inter)
+%     if all(conx)
+%         if P0(1) < xBody(1)
+%             % Intersection before body
+%             reason = 1;
+%         elseif P0(1) > xBody(2)
+%             % Intersection beyond body
+%             reason = 2;
+%         else
+%             reason = 4;
+%         end
+%     else
+%         if I(:,1) <= xBody(1)
+%             % Intersection before body
+%             reason = 1;
+%         else
+%             % Intersection beyond body
+%             reason = 2;
+%         end
+%     end
+
+    if any([P0(1);I(:,1)] <= xBody(1))
+        % Intersection before body
+        reason = 1;
+    elseif any([P0(1);I(:,1)] >= xBody(2))
+        % Intersection beyond body
+        reason = 2;
+    elseif any([P0(3);I(:,3)] >= zBody(j(1)))
+        % Intersection below body
+        reason = 3;
+    elseif any([P0(3);I(:,3)] <= zBody(j(end)))
+        % Intersection above body
+        reason = 4;
+    else
+        % Increase span
+        reason = 5;
+    end
+
 else
-    
     % Ensures intersection point is between P0 and P1, outwith will return
     % a infeasible design
-    between = (I(1) >= P0(1) & I(1) <= P1(1)) | (I(1) >= P1(1) & I(1) <= P0(1));
-
-    % Ensure only one intersection is returned
-    intersection = I(between(1),:);
+    between = (inter(:,1) >= P0(1) & inter(:,1) <= P1(1)) | (inter(:,1) >= P1(1) & inter(:,1) <= P0(1));
+    
+    if between
+        % Ensure only one intersection is returned
+        intersection = inter(between(1),:);
+    else
+        % Increase semispan
+        reason = 5;
+    end
 end

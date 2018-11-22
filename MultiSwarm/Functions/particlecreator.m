@@ -1,4 +1,4 @@
-function [assemblyProperties,parPos,configPos,parameters,success] = particlecreator(parPos,configPos,partArrays,sections,attempt)
+function [assemblyProperties,parPos,parameters] = particlecreator(parPos,configPos,partArrays,sections)
 %% Assembles arbitrary configuration
 % Will fuse together multiple aerofoil sections with body. Will also work
 % for aerofoil alone or body alone configurations
@@ -9,7 +9,7 @@ function [assemblyProperties,parPos,configPos,parameters,success] = particlecrea
 
 [wingCon,aftbodyCon,forebodyCon,noseCon,controlCon] = deal(false(dim,1));
 
-% Loop through configuration and set parts to true at that point in the 
+% Loop through configuration and set parts to true at that point in the
 % configuration cell when part name = "Wing" or "Nose" etc
 for i = 1:dim
     wingCon(i) = strcmp(partArrays{i,1},"Wing") | strcmp(partArrays{i,1},"Tail");
@@ -28,68 +28,7 @@ forebodyDim = array(forebodyCon);
 noseDim = array(noseCon);
 controlDim = array(controlCon);
 
-%% Create aerofoils
-% If no aerofoils in configuration, loop will be skipped as dim = 0
-% Count back from number of aerofoils for preallocation purposes
-for i=wingDim:-1:1
-    
-    % Initialise what indices of configPos refer to wing, along with what 
-    % each position physcially is (eg. "Chord", "Semispan" etc)
-    wingStr = partArrays{wingDim,2};
-    wingArray = partArrays{wingDim,3};
-    
-    % Use above indices to take only wing related parameters for configPos
-    wingPos = configPos(wingArray);
-    
-    % Assign variables to their physical attribute
-    dihedral = wingPos(wingStr == "Dihedral");
-    chord = wingPos(wingStr == "Chord");
-    sweep = wingPos(wingStr == "LESweep");
-    semispan = wingPos(wingStr == "Semispan");
-    offset = wingPos(any(wingStr == ["xOffset","zOffset"]',1));
-    
-    if attempt > 1
-        
-        chordID = partArrays{wingDim,2} == "Chord";
-        ID = find(chordID,1,'first');
-        
-        % Alter physical chord to be created
-        Cr = chord(1);
-        Cr = Cr - 0.1*Cr;
-        chord(1) = Cr;
-        
-        % Alter particle chord, feedback both to costcaller
-        parChord = parPos(chordID);
-        
-        parCr = parChord(1);
-        parCr = parCr - 0.1*parCr;
-        parChord(1) = parCr;
-        
-        % Enforce taper <= 1
-        for j = 2:numel(chord)
-             if chord(j) > chord(j-1)
-                 chord(j) = chord(j-1);
-                 parChord(j) = parChord(j-1);
-             end
-        end
-        
-        parPos(chordID) = parChord;
-        configPos(chordID) = chord;
-        
-    end
-    
-    % Create aerofoil
-    if isempty(controlDim)
-        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,offset,sections);
-    else
-        controlArray = partArrays{controlDim,3};
-        control = configPos(controlArray);
-        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,offset,sections,control);
-    end
-    
-end
-
-%% Create body and assemble
+%% Create body
 % Check if body is part of configuration, if so build it, if not set body
 % parts to empty. Currently aftbody defines body existence, and if it does
 % nose and forebody must also exist
@@ -119,20 +58,197 @@ if any(aftbodyCon)
     % Create aft body portion of body
     aftbody = arbitraryfuse(aftbodyPos,noseForeLength);
     
-    if any(wingCon)
+else % Set all body parts to empty
+    aftbody = ''; forebody = ''; Nose = '';
+end
+
+%% Create aerofoils
+% If no aerofoils in configuration, loop will be skipped as dim = 0
+% Count back from number of aerofoils for preallocation purposes
+for i=wingDim:-1:1
+    
+    % Initialise what indices of configPos refer to wing, along with what
+    % each position physcially is (eg. "Chord", "Semispan" etc)
+    wingStr = partArrays{wingDim,2};
+    wingArray = partArrays{wingDim,3};
+    
+    % Use above indices to take only wing related parameters for configPos
+    wingPos = configPos(wingArray);
+    wingPar = parPos(wingArray);
+    
+    dihedralID = wingStr == "Dihedral";
+    chordID = wingStr == "Chord";
+    sweepID = wingStr == "LESweep";
+    semispanID = wingStr == "Semispan";
+    xOffsetID = wingStr == "xOffset";
+    zOffsetID = wingStr == "zOffset";
+    
+    % Assign variables to their physical attribute
+    dihedral = wingPos(dihedralID);
+    chord = wingPos(chordID);
+    sweep = wingPos(sweepID);
+    semispan = wingPos(semispanID);
+    xOffset = wingPos(xOffsetID);
+    zOffset = wingPos(zOffsetID);
+    
+    parDihedral = wingPar(dihedralID);
+    parChord = wingPar(chordID);
+    parSweep = wingPar(sweepID);
+    parSemispan = wingPar(semispanID);
+    parxOffset = wingPar(xOffsetID);
+    parzOffset = wingPar(zOffsetID);
+    
+    if ~any(semispan)
+        semispan(1) = 2;
+        parSemispan(1) = 2;
+    end
+    
+    % Create aerofoil
+    if isempty(controlDim)
+        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
+    else
+        controlArray = partArrays{controlDim,3};
+        control = configPos(controlArray);
+        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
+    end
+    
+    if any(aftbodyCon)
+        
+        attempt = 1;
+        
         % Join body and aerofoil together
-        [liftSurface,aftbody,success] = bodyfoil(aftbody,liftSurface);
+        [liftSurface,aftbody,success,reason] = bodyfoil(aftbody,liftSurface,[xOffset,zOffset]);
         
         % If joining is unsuccessful, configuration not feasible, stop
         % bodyfoil and return to particlecreator with flag
-        if ~success
-            [assemblyProperties,parameters] = deal([]);
-            return
+        while ~success
+            
+            if isempty(reason)
+                % Use to debug if configuration cannot be assembled
+                % reason
+            
+            elseif any(reason == [1,5]) || attempt < 10
+                switch reason
+                    case {1,2}
+                        xOffset = xOffset - 0.1*attempt*xOffset;
+                        parxOffset = parxOffset - 0.1*attempt*parxOffset;
+                        
+                        if xOffset == 0 || (attempt > 5 && reason == 2)
+                            xOffset = xOffset + 0.1;
+                            parxOffset = parxOffset + 0.1;
+                        end
+                        
+                    case {3,4}
+                        zOffset = zOffset - 0.1*attempt*zOffset;
+                        parzOffset = parzOffset - 0.1*attempt*parzOffset;
+                        
+                        if zOffset == 0 || (attempt > 5 && reason == 4)
+                            zOffset = zOffset + 0.1;
+                            parzOffset = parzOffset + 0.1;
+                        end
+                        
+                    case 5
+                        if semispan(1) == 0
+                            semispan(1) = 0.1;
+                            parSemispan(1) = 0.1;
+                        else
+                            semispan(1) = semispan(1) + 0.1*semispan(1);
+                            parSemispan(1) = parSemispan(1) + 0.1*parSemispan(1);
+                        end
+                            
+                        if isempty(controlDim)
+                            liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
+                        else
+                            liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
+                        end
+                end
+                
+            else
+                
+                % If too many attempts already, last resort reduce chord
+                
+                % Alter physical chord to be created, and particle chord to
+                % be fed back to optimiser
+                chord(1) = chord(1) - 0.1*chord(1);
+                parChord(1) = parChord(1) - 0.1*parChord(1);
+                
+                % Enforce taper <= 1
+                for j = 2:numel(chord)
+                    if chord(j) > chord(j-1)
+                        chord(j) = chord(j-1);
+                        parChord(j) = parChord(j-1);
+                    end
+                end
+                
+                % Re-create aerofoil
+                if isempty(controlDim)
+                    liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
+                else
+                    liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
+                end
+                
+            end
+            
+            % Re-try merge
+            [liftSurface,aftbody,success,reason] = bodyfoil(aftbody,liftSurface,[xOffset,zOffset]);
+            
+            attempt = attempt + 1;
+            
+            % Use to debug if configuration cannot be assembled
+            if attempt > 100
+               attempt
+            end
+            
+        end
+        
+        liftSurface.Offset = [xOffset,zOffset];
+        
+        % Feedback particle and physical positions to optimiser
+        parPos(wingArray(dihedralID)) = parDihedral;
+        parPos(wingArray(semispanID)) = parSemispan;
+        parPos(wingArray(chordID)) = parChord;
+        parPos(wingArray(sweepID)) = parSweep;
+        parPos(wingArray(xOffsetID)) = parxOffset;
+        parPos(wingArray(zOffsetID)) = parzOffset;
+
+        configPos(wingArray(dihedralID)) = dihedral;
+        configPos(wingArray(semispanID)) = semispan;
+        configPos(wingArray(chordID)) = chord;
+        configPos(wingArray(sweepID)) = sweep;
+        configPos(wingArray(xOffsetID)) = xOffset;
+        configPos(wingArray(zOffsetID)) = zOffset;
+        
+        % Discretise aerofoils based on target length
+        liftSurface = discwing(liftSurface);
+        
+        if i == 1 % First liftSurface assumed to be wing
+        
+            wing = liftSurface(1);
+
+            Aref = sum(wing.Area);
+            MAC = sum(wing.Area.*wing.MAC)/Aref;
+
+            wingspan = sum(wing.Span);
+        
         end
     end
+        
     
-    % Find radial aft body points for fore body interpolation
-    % size-1 for panel based over 
+end
+
+if ~any(wingCon)
+    
+    Aref = aftbody.Area;
+    MAC = aftbody.Length/2;parameters.BodyW = aftbody.Width;
+    wingspan = [];
+    liftSurface = '';
+    
+end
+
+if any(forebodyCon)
+    
+        % Find radial aft body points for fore body interpolation
+    % size-1 for panel based over
     radial = radialpoints(aftbody.Points);
     [~,dim_f] = size(radial.y);
     
@@ -153,31 +269,6 @@ if any(aftbodyCon)
     
     forebody = foreGen(forebodyPos,nosePoints,radial,0.5);
     
-else % Set all body parts to empty
-    aftbody = ''; forebody = ''; Nose = '';
-end
-
-%% New wing discretisation
-if any(wingCon) % Aerofoil(s)
-%     surfaceParameters = [0.5,0.8,0.7];
-%     
-%     liftSurface = controlsurface(liftSurface,surfaceParameters);
-    
-    % Discretise aerofoils based on target length
-    liftSurface = discwing(liftSurface);
-    % liftSurface 1 assumed to be wing
-    
-    wing = liftSurface(1);
-    
-    Aref = sum(wing.Area);
-    MAC = sum(wing.Area.*wing.MAC)/Aref;
-    
-    wingspan = sum(wing.Span);
-else
-    Aref = aftbody.Area;
-    MAC = aftbody.Length/2;parameters.BodyW = aftbody.Width;
-    wingspan = [];
-    liftSurface = '';
 end
 
 parameters.Aref = Aref;

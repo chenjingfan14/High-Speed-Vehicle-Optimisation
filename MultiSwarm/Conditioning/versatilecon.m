@@ -1,4 +1,4 @@
-function [parPos,physicalPos] = versatilecon(parPos,cond,varArray)
+function [parPos,physicalPos] = versatilecon(parPos,nPop,cond,varArray)
 %% Function introduces conditions and ensures they are met
 % Conditions placed on particle positions, translated to physical positions
 % by ratios eg. physicalPos(wingroot) = parPos(wingroot)*aftfuselagelength

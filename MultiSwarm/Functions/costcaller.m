@@ -8,7 +8,7 @@ Bezier = options.Bezier;
 
 [partArrays,sectionArray] = partIndexing(cond,varArray);
 
-[parPos,physicalPos] = conditioning(parPos,cond,varArray,options);
+[parPos,physicalPos] = conditioning(parPos,nPop,cond,varArray,options);
 
 
 sectionPos = physicalPos(:,sectionArray);
@@ -27,14 +27,8 @@ if options.parallel
     % options.parallel
     parfor i=1:nPop
         
-        success = false;
-        attempt = 1;
-        
         % Attempt to create configuration
-        while ~success
-            [parProperties,parPos(i,:),physicalPos(i,:),parameters,success] = particlecreator(parPos(i,:),physicalPos(i,:),partArrays,sections(i,:),attempt);
-            attempt = attempt + 1;
-        end
+        [parProperties,parPos(i,:),parameters] = particlecreator(parPos(i,:),physicalPos(i,:),partArrays,sections(i,:));
         
         % End use cost function to calculate fitness
         parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
@@ -43,14 +37,8 @@ if options.parallel
 else % Same as above but for single-core processing
     for i=1:nPop
         
-        success = false;
-        attempt = 1;
-        
         % Attempt to create configuration
-        while ~success
-            [parProperties,parPos(i,:),physicalPos(i,:),parameters,success] = particlecreator(parPos(i,:),physicalPos(i,:),partArrays,sections(i,:),attempt);
-            attempt = attempt + 1;
-        end
+        [parProperties,parPos(i,:),parameters] = particlecreator(parPos(i,:),physicalPos(i,:),partArrays,sections(i,:));
         
         % End use cost function to calculate fitness
         parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);

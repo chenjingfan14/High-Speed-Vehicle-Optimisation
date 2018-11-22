@@ -25,7 +25,7 @@ classdef wingtail
     end
     
     methods
-        function obj=wingtail(dihedral,semispan,chord,sweep,offset,sections,control)
+        function obj=wingtail(dihedral,semispan,chord,sweep,sections,control)
             
             % If any aerofoil section span = 0, delete all corresponding partition
             % properties
@@ -48,7 +48,7 @@ classdef wingtail
             
             xPanels = obj.xPanels;
             X = (0:xPanels)';
-            nParts = sum(semispan>0);
+            nParts = sum(semispan > 0);
             nSecs = nParts + 1;
             
             [Area,cbar] = deal(zeros(1,nParts));
@@ -162,7 +162,7 @@ classdef wingtail
             
             %%
             
-            z = offset(2) + (bh * sin(di));
+            z = bh * sin(di);
             
             % Calculates all xpoints with leading edge sweep offset
             [x_u,x_l] = deal(xnorm.*chord + xLE);
@@ -214,7 +214,6 @@ classdef wingtail
             obj.MAC = cbar;
             obj.WetMAC = cbar;
             obj.Dihedral = di;
-            obj.Offset = offset;
             obj.Points = xyztopoints(wing);
             obj.Partitions = nParts;
             obj.Boolean = boolean;

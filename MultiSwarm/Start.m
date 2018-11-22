@@ -10,20 +10,24 @@ addpath(genpath('VehicleGen'))
 addpath(genpath('AeroPrediction'))
 
 % Number of processors to be used (up to 4 on desktop)
-nProc = 10;
-
+nProc = 1;
+costFun = @aeroprediction; % Cost function caller
 options = simOptions(nProc);
+
+parallel = options.parallel;
 Bezier = options.Bezier;
 control = options.control;
 
-if options.parallel
-    parpool('local',nProc)
+pool = gcp('nocreate');
+
+if parallel && isempty(pool)
+    parpool('local',nProc);
 end
 
 % Swarm size (must be divisible by 2 & 3 for global best and mutation
 % subsets in MOPSO)
-nPop = 30;
-maxIt = 100; % Maximum number of iterations
+nPop = 1200;
+maxIt = 5000; % Maximum number of iterations
 
 w = 0.3; % Intertia coeff
 c1 = 1.49; % Personal acceleration coeff
@@ -44,24 +48,40 @@ fi = maxIt; % Display Pareto Front evey fi iterations
 n = 3;
 
 variCons = {"Variables",    "Num Of",   "Conditions"    'Transformations';...
-    "Dihedral",             "~",            "~",            '~';...
-    "Chord",                n+1,            "< Previous",   '.*AftLength';...
-    "LESweep",              n,              "~"             '~';...
-    "Semispan",             n,              "Minimum 0.5",  '~';...            
-    "SectionDefinition",    "~",            "~",            '~';...
-    "xOffset",              "~",            "~",            '.*AftLength';...
-    "zOffset",              "~",            "~"             '.*AftHeight/2';...
-    "UpperLength",          "~",            "~",            '~';...
-    "yUpperRad",            "~",            "~",            '~';...
-    "yBotRatio",            "~",            "~",            '~';...
-    "zUpperRad",            "~",            "~",            '~';...
-    "SideLength",           "~",            "~",            '~';...
-    "zLowerRad",            "~",            "~",            '~';...
-    "AftLength",            "~",            "~",            '~';...
-    "NoseRad",              "~",            "~",            '~';...
-    "NoseLength",           "~",            "~",            '.*NoseRad';...
-    "zNoseOffset",          "~",            "~",            '.*AftHeight/2';...
-    "ForeLength",           "~",            "~",            '~'};
+    "Dihedral",             "~",            "~",                        '~';...
+    "Chord",                n+1,            "< Previous",               '.*AftLength';...
+    "LESweep",              n,              "~"                         '~';...
+    "Semispan",             n,              ["Minimum 0.5" "sum > 2"],  '~';...            
+    "SectionDefinition",    "~",            "~",                        '~';...
+    "xOffset",              "~",            "~",                        '.*AftLength';...
+    "zOffset",              "~",            "~"                         '.*AftHeight/2';...
+    "UpperLength",          "~",            "~",                        '~';...
+    "yUpperRad",            "~",            "~",                        '~';...
+    "yBotRatio",            "~",            "~",                        '~';...
+    "zUpperRad",            "~",            "~",                        '~';...
+    "SideLength",           "~",            "~",                        '~';...
+    "zLowerRad",            "~",            "~",                        '~';...
+    "AftLength",            "~",            "~",                        '~';...
+    "NoseRad",              "~",            "~",                        '~';...
+    "NoseLength",           "~",            "~",                        '.*NoseRad';...
+    "zNoseOffset",          "~",            "~",                        '.*AftHeight/2';...
+    "ForeLength",           "~",            "~",                        '~'};
+
+minChord = 0.1;
+minLESweep = 0;
+minSemispan = 0.1;
+
+minChord = zeros(1,n+1) + minChord;
+minLESweep = zeros(1,n) + minLESweep;
+minSemispan = zeros(1,n) + minSemispan;
+
+maxChord = 1;
+maxLESweep = 80;
+maxSemispan = 5;
+
+maxChord = zeros(1,n+1) + maxChord;
+maxLESweep = zeros(1,n) + maxLESweep;
+maxSemispan = zeros(1,n) + maxSemispan;
 
 for i=size(variCons,1):-1:1
     secDef(i) = variCons{i,1} == "SectionDefinition";
@@ -115,16 +135,10 @@ maxSec = repmat(maxSec,1,n+1);
 %     1,1,1, 1,1,1, 10, 0.5,1,0, 5];
 
 %% Wing Only
-varMin = [0, 0.5,0.1,0.1,0.1, 0,0,0, 2,0,0, minSec, 0,-0.5,... % Wing
+varMin = [0, minChord, minLESweep, minSemispan, minSec, -0.25,-0.5,... % Wing
     NaN,NaN,NaN, NaN,NaN,NaN, NaN, NaN,NaN,NaN, NaN]; % Body
-varMax = [20, 1,1,1,1, 80,60,60, 5,2,2, maxSec, 0.5,0,...
+varMax = [20, maxChord, maxLESweep, maxSemispan, maxSec, 0.5,0,...
     NaN,NaN,NaN, NaN,NaN,NaN, NaN, NaN,NaN,NaN, NaN];
-
-%% Body Only
-% varMin = [NaN, NaN,NaN,NaN,NaN, NaN,NaN,NaN, NaN,NaN,NaN, NaN,NaN,NaN,NaN, NaN,NaN,... % Wing
-%     0,0.1,0.1, 0.1,0,0.1, 4, 0,0,-0.5, 1]; % Body
-% varMax = [NaN, NaN,NaN,NaN,NaN, NaN,NaN,NaN, NaN,NaN,NaN, NaN,NaN,NaN,NaN, NaN,NaN,...
-%     1,1,1, 1,1,1, 10, 0.5,1,0, 5];
 
 %% Control Parameters
 if control
@@ -161,7 +175,7 @@ end
 flow = flowparameters();
 
 %% Test Configurations - Comment out when running simulations
-% varTest = [0, 0.5,0.1,0.1,0.1, 0,0,0, 2,0,0, 1,1,1,1, 0,-0.5,... % Wing
+% varMin = [0, minChord, minLESweep, minSemispan, minSec, 0,-0.5,... % Wing
 %     NaN,NaN,NaN, NaN,NaN,NaN, NaN, NaN,NaN,NaN, NaN]; % Body
 % 
 % standard = isnan(varTest);
@@ -190,8 +204,6 @@ load('thetaBetaCurves.mat');
 Mrange = [1:0.0001:10,10.1:0.1:100];
 PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
 
-costFun = @aeroprediction; % Cost function caller
-
 % Main PSO program
 if nFun == 1
     
@@ -209,13 +221,13 @@ else
     
     inv = false(1,nFun);
     inv = logical(inv);
-    maxPF = nPop; % Maximum number of Pareto Front values
+    maxPF = 100; % Maximum number of Pareto Front values
     mutProb = 1/nVar; % Probability of mutation
     
     [GlobalBestFit,GlobalBestPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 end
 
-if options.parallel
+if parallel
     delete(gcp('nocreate'));
 end
 
