@@ -225,9 +225,11 @@ for i=wingDim:-1:1
         
             wing = liftSurface(1);
 
-            Aref = sum(wing.Area);
-            MAC = sum(wing.Area.*wing.MAC)/Aref;
+            sumArea = sum(wing.Area);
+            MAC = sum(wing.Area.*wing.MAC)/sumArea;
 
+            Aref = sumArea*2;
+            
             wingspan = sum(wing.Span);
         
         end

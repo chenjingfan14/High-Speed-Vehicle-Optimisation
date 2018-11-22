@@ -23,3 +23,6 @@ options.viscous = true;
 
 % Include control surfaces in optimisation
 options.control = false;
+
+% Initial baseline configuration to be analysed and used as reference vals
+options.baseline = true;

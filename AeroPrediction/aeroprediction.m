@@ -1,4 +1,4 @@
-function [cost,aerodynamics] = aeroprediction(properties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
+function [cost,results] = aeroprediction(properties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
 %% Aerodynamic prediction
 
 %% Initialisation
@@ -35,6 +35,7 @@ foilCp = cell(dim(1),dim(2),numFoils);
 shielding = options.shielding;
 viscous = options.viscous;
 control = options.control;
+baseline = options.baseline;
 
 for i=1:runs
     %% Outer flight state loop 
@@ -341,7 +342,7 @@ for i=1:runs
         partCN(j) = 2*sum(-((Cp.*area.*unitNz)))/Aref;
         partCA(j) = 2*sum(-((Cp.*area.*unitNx)))/Aref;
         partCm(j) = sum(-(Cp.*area.*unitNx) + (Cp.*area.*unitNz))/Aref;
-           
+        
         MinfPrev = Minf;
         alphaPrev = alpha;
         deltaPrev = delta;
@@ -405,9 +406,19 @@ if any(numFoils)
     
     % Constraint section. Apply penalties if desired values are too
     % high/low
-    constrain = [moment,cop];
-    minVal = [0,0];
-    maxVal = [inf,0.5];
+    
+    if baseline
+        
+        base = options.base;
+        
+        constrain = [Mbar,cop];
+        minVal = [0,0];
+        maxVal = [base.RootMomentBar,base.copBar];
+    else
+        constrain = [moment,cop];
+        minVal = [0,0];
+        maxVal = [inf,0.5];
+    end
     
     penalty = violation(constrain,minVal,maxVal);
     
@@ -427,13 +438,17 @@ else
     cost = [];
 end
 
-aerodynamics.Cl = Cl;
-aerodynamics.Cd = Cd;
-aerodynamics.Cm = Cm;
-aerodynamics.CN = CN;
-aerodynamics.CA = CA;
-aerodynamics.CoP = copCell;
-    
+results.Cl = Cl;
+results.Cd = Cd;
+results.Cm = Cm;
+results.CN = CN;
+results.CA = CA;
+results.CoP = copCell;
+results.copBar = cop;
+results.RootMoment = rootMoment;
+results.RootMomentBar = Mbar;
+results.Lift = L;
+results.Drag = D;
 %% To view created configuration, uncomment this
 % Leave commented during simulations, otherwise it will plot everything 
 % plotter(points,"pause")

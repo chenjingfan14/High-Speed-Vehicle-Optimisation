@@ -36,8 +36,8 @@ for i=1:numAerofoils
     
     % Apply foil x-offset wrt aft-body
     aftOffset = offset(1) + xBody(1);
-    foil(:,1:3:end) = foil(:,1:3:end) - foil(1,1:3:end) + aftOffset;
-    foil(:,3:3:end) = foil(:,3:3:end) - foil(1,3:3:end) + offset(2);
+    foil(:,1:3:end) = foil(:,1:3:end) - foil(1,1) + aftOffset;
+    foil(:,3:3:end) = foil(:,3:3:end) - foil(1,3) + offset(2);
     
     zFoil = foil(:,3:3:end);
     
@@ -84,9 +84,9 @@ for i=1:numAerofoils
         if isempty(inter)
             
             % Check what failed config looks like
-            % aerofoil.Points.x = foil(:,1:3:end);
-            % aerofoil.Points.z = foil(:,3:3:end);
-            % plotter([aftBody.Points,aerofoil.Points]);
+            aerofoil.Points.x = foil(:,1:3:end);
+            aerofoil.Points.z = foil(:,3:3:end);
+            plotter([aftBody.Points,aerofoil.Points]);
             
             success = false;
             return

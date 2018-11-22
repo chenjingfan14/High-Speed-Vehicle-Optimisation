@@ -17,12 +17,25 @@ options = simOptions(nProc);
 parallel = options.parallel;
 Bezier = options.Bezier;
 control = options.control;
+baseline = options.baseline;
 
 pool = gcp('nocreate');
 
 if parallel && isempty(pool)
     parpool('local',nProc);
 end
+
+% Call flowparameters() to apply pre-defined angle attack/Mach numbers
+% Call flowparameters(10,3) for example to run configurations at angle of
+% attack 10deg and Mach 3. Multiple values can be input eg.
+% flowparameters([0,2,4,6],[3,4]). See inside function for predetermined
+% values
+flow = flowparameters();
+
+% Load lookup tables for shock-expansion and Prandtl Meyer expansion
+load('thetaBetaCurves.mat');
+Mrange = [1:0.0001:10,10.1:0.1:100];
+PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
 
 % Swarm size (must be divisible by 2 & 3 for global best and mutation
 % subsets in MOPSO)
@@ -167,12 +180,9 @@ else
     [varMin,varMax] = standardvariables(standard,n,options);
 end
 
-% Call flowparameters() to apply pre-defined angle attack/Mach numbers
-% Call flowparameters(10,3) for example to run configurations at angle of
-% attack 10deg and Mach 3. Multiple values can be input eg.
-% flowparameters([0,2,4,6],[3,4]). See inside function for predetermined
-% values
-flow = flowparameters();
+if baseline
+    options.base = baselinefun(flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer);
+end
 
 %% Test Configurations - Comment out when running simulations
 % varMin = [0, minChord, minLESweep, minSemispan, minSec, 0,-0.5,... % Wing
@@ -198,11 +208,6 @@ flow = flowparameters();
 % return
 
 %%
-
-% Load lookup tables for shock-expansion and Prandtl Meyer expansion
-load('thetaBetaCurves.mat');
-Mrange = [1:0.0001:10,10.1:0.1:100];
-PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
 
 % Main PSO program
 if nFun == 1

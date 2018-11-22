@@ -18,7 +18,7 @@ N = -(n(:,1).*w(:,1) + n(:,2).*w(:,2) + n(:,3).*w(:,3));
 
 % Compute the Isection parameter
 sI = N ./ D;
-I = P0 + sI*u;
+I = round(P0 + sI*u,10);
 
 conx = I(:,1) >= xBody(1) & I(:,1) <= xBody(2) | I(:,1) >= xBody(2) & I(:,1) <= xBody(1);
 cony = I(:,2) >= yBody(j) & I(:,2) <= yBody(j+1) | I(:,2) >= yBody(j+1) & I(:,2) <= yBody(j);
@@ -27,25 +27,6 @@ conz = I(:,3) >= zBody(j) & I(:,3) <= zBody(j+1) | I(:,3) >= zBody(j+1) & I(:,3)
 inter = I(conx & cony & conz,:);
 
 if isempty(inter)
-%     if all(conx)
-%         if P0(1) < xBody(1)
-%             % Intersection before body
-%             reason = 1;
-%         elseif P0(1) > xBody(2)
-%             % Intersection beyond body
-%             reason = 2;
-%         else
-%             reason = 4;
-%         end
-%     else
-%         if I(:,1) <= xBody(1)
-%             % Intersection before body
-%             reason = 1;
-%         else
-%             % Intersection beyond body
-%             reason = 2;
-%         end
-%     end
 
     if any([P0(1);I(:,1)] <= xBody(1))
         % Intersection before body
@@ -54,10 +35,10 @@ if isempty(inter)
         % Intersection beyond body
         reason = 2;
     elseif any([P0(3);I(:,3)] >= zBody(j(1)))
-        % Intersection below body
+        % Intersection above body
         reason = 3;
     elseif any([P0(3);I(:,3)] <= zBody(j(end)))
-        % Intersection above body
+        % Intersection below body
         reason = 4;
     else
         % Increase span
