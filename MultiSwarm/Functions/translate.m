@@ -73,6 +73,8 @@ for i=2:dim1
             end
             if contains(coni,"Floor")
                 equation = 'floor(target)';
+                constraint = NaN;
+                setto = NaN;
             end
             
             Constraint(ii,:) = constraint;

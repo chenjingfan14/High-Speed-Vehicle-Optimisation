@@ -34,15 +34,29 @@ end
 stanSection = repmat(stanSection,1,n+1);
 
 if options.control
+    
     stanControl = [0.4,0.7,0.7];
-    % As above
+    % Cylindrical body
     standardVar = [0, stanChord, stanLESweep, stanSemispan, stanSection, 0,0,... % Wing
         0,1,1, 1,0,1, 8, 0.25,0.25,0, 4,... % Body
         stanControl]; % Control
+    
+    % X-34 Body (reverse-transformed, ie. if transformations in 
+    % conditioning change these also need to)
+%     standardVar = [0, stanChord, stanLESweep, stanSemispan, stanSection, 0,0,... % Wing
+%         0,0.88,0.1, 0.88,0.759,0.05, 11.8956, 0.155,0.7193,-0.38, 4.4238,... % Body
+%         stanControl]; % Control
+
 else
-    % As above
+    
+    % Cylindrical body
     standardVar = [0, stanChord, stanLESweep, stanSemispan, stanSection, 0,0,... % Wing
         0,1,1, 1,0,1, 8, 0.25,0.25,0, 4]; % Body
+    
+    % X-34 Body (reverse-transformed, ie. if transformations in 
+    % conditioning change these also need to)
+%     standardVar = [0, stanChord, stanLESweep, stanSemispan, stanSection, 0,0,... % Wing
+%         0,0.88,0.1, 0.88,0.759,0.05, 11.8956, 0.155,0.7193,-0.38, 4.4238]; % body
 end
 
 varMin(con) = standardVar(con);

@@ -275,6 +275,7 @@ for i=1:runs
         if any(partProp.Name == ["aerofoil","wing"]) && foilCount == 1
             rootMoment(i) = wingbending(Cp,rotPoints(j),run);
         end
+        
         %% Shielding
         
         if shielding && conical

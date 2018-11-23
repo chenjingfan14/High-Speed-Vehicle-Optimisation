@@ -114,51 +114,93 @@ for i=wingDim:-1:1
     
     if any(aftbodyCon)
         
+        % Factor to determine how much the wing/tail is shifted in 
+        % necessary direction
+        fixFactor = 0.1;
+        
+        % Number of historical failures to take into account
+        nHist = 5;
+        
+        % Condition to keep shift factor from reducing every failed attempt
+        stayOut = -nHist;
+        
+        % Initialise historical failure reason matrix
+        reasonHistory = zeros(nHist,1);
+        
+        % First attempt at joining wing/tail and body
         attempt = 1;
         
         % Join body and aerofoil together
         [liftSurface,aftbody,success,reason] = bodyfoil(aftbody,liftSurface,[xOffset,zOffset]);
         
-        % If joining is unsuccessful, configuration not feasible, stop
-        % bodyfoil and return to particlecreator with flag
+        %% If unsuccessful, while loop to fix until it is successful
         while ~success
+            
+            % Reason config failed to create
+            reasonHistory(1) = reason;
+            
+            % If while loop is bouncing between fail reasons
+            bouncing = all(diff(reasonHistory) ~= 0);
+            
+            % If history of failure reasons is failed, and loop is bouncing
+            % between reasons, and loop hasn't been reduced fixFactor
+            % recently: reduce fixFactor & reset stayOut
+            if attempt > nHist && bouncing && stayOut >= 0
+                fixFactor = fixFactor/2;
+                stayOut = -nHist;
+            end
             
             if isempty(reason)
                 % Use to debug if configuration cannot be assembled
                 % reason
             
+            % Fixing for specific reasons. Will always go inside here if
+            % wing/tail is before aftbody, or semispan must be increased.
+            % Other failure reasons can be reduced by last resort below
             elseif any(reason == [1,5]) || attempt < 10
                 switch reason
                     case {1,2}
                         
+                        % Choose largest to define wing/tail shift
+                        % Chord can't be negative which keeps things nice
+                        % here (in terms of signs)
                         physical = [xOffset,chord(1)];
                         particle = [parxOffset,parChord(1)];
                         
                         [~,use] = max(physical);
                         
-                        if reason == 1
-                            xOffset = xOffset + 0.1*physical(use);
-                            parxOffset = parxOffset + 0.1*particle(use);
+                        if reason == 1 % Increase offset
+                            xOffset = xOffset + fixFactor*physical(use);
+                            parxOffset = parxOffset + fixFactor*particle(use);
                         
-                        else
-                            xOffset = xOffset - 0.1*physical(use);
-                            parxOffset = parxOffset - 0.1*particle(use);
+                        else % Reduce offset
+                            xOffset = xOffset - fixFactor*physical(use);
+                            parxOffset = parxOffset - fixFactor*particle(use);
                         end
                         
                     case {3,4}
-                        zOffset = zOffset - 0.1*zOffset;
-                        parzOffset = parzOffset - 0.1*parzOffset;
+                        
+                        % Should not come in here for vertical tails
+                        
+                        % zOffset defined from centre of aftbody, so
+                        % negative will bring wing towards centre
+                        
+                        zOffset = zOffset - fixFactor*zOffset;
+                        parzOffset = parzOffset - fixFactor*parzOffset;
                         
                         if zOffset == 0 || (attempt > 5 && reason == 4)
-                            zOffset = zOffset + 0.1;
-                            parzOffset = parzOffset + 0.1;
+                            zOffset = zOffset + fixFactor;
+                            parzOffset = parzOffset + fixFactor;
                         end
                         
                     case 5
+                        
+                        % If inboard semispan = 0, it will not increase
+                        % below, thus add small number to make it non-zero
                         if semispan(1) == 0
                             semispan(1) = 0.1;
                             parSemispan(1) = 0.1;
-                        else
+                        else % Increase semispan
                             semispan(1) = semispan(1) + 0.1*semispan(1);
                             parSemispan(1) = parSemispan(1) + 0.1*parSemispan(1);
                         end
@@ -199,15 +241,22 @@ for i=wingDim:-1:1
             % Re-try merge
             [liftSurface,aftbody,success,reason] = bodyfoil(aftbody,liftSurface,[xOffset,zOffset]);
             
+            % Increase number of attempts and stayOut condition
             attempt = attempt + 1;
+            stayOut = stayOut + 1;
+            
+            % Shift current reason down one in the history array to make 
+            % room for new reason
+            reasonHistory = circshift(reasonHistory,1);
             
             % Use to debug if configuration cannot be assembled
-            if attempt > 100
+            if attempt > 90
                attempt
             end
             
         end
         
+        %%
         liftSurface.Offset = [xOffset,zOffset];
         
         % Feedback particle and physical positions to optimiser

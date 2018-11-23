@@ -1,6 +1,9 @@
 function [base] = baselinefun(flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer)
+%% Baseline configuration to be improved upon (currently X-34)
 
+% X-34 build uses pre-defined aerofoil sections so set Bezier to false
 options.Bezier = false;
+% Baseline not yet created for cost function so set to false
 options.baseline = false;
 
 % Number of wing partitions
@@ -45,6 +48,6 @@ sectionPos = baseVar(:,sectionArray);
 sections = foilData(sectionPos);
 
 [baseProperties,~,parameters] = particlecreator(baseVar,baseVar,partArrays,sections);
-parameters.Aref = 33.213;
+% parameters.Aref = 33.213;
 
 [~,base] = aeroprediction(baseProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);

@@ -44,11 +44,10 @@ classdef nose < body
       
             end
             
-%             a.Name = "nose";
             x = (x*cos(rot) - z*sin(rot)) - rotArm;
             a.x = x - min(x(:));
             a.y = y;
-            a.z = z*cos(rot)+(x-rotArm)*sin(rot)+zOff;
+            a.z = z*cos(rot)+(x-rotArm)*sin(rot);
             obj.Points = xyztopoints(a);
             
             obj.Radius = r;

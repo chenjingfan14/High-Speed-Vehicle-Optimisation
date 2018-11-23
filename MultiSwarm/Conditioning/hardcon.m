@@ -35,7 +35,12 @@ for i = 1:dim
     ID = popArray + (targArray-1)*nPop;
     
     if ~isempty(equation)
+        
         [numConditions,numConstraints] = size(consArray);
+        
+        if all(isnan(consArray),2)
+            numConstraints = 0;
+        end
         
         for ii = 1:numConditions
             

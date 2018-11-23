@@ -39,20 +39,33 @@ end
 
 if isempty(inter)
 
-    if any([P0(1);I(:,1)] <= xBody(1))
+    % Initial attempt at finding problem
+    if any(I(cony & conz,1) <= xBody(1))
         % Intersection before body
         reason = 1;
-    elseif any([P0(1);I(:,1)] >= xBody(2))
+    elseif any(I(cony & conz,1) >= xBody(2))
         % Intersection beyond body
         reason = 2;
-    elseif any([P0(3);I(:,3)] >= zBody(j(1)))
+    elseif any(I(conx,3) >= zBody(j(1)))
         % Intersection above body
         reason = 3;
-    elseif any([P0(3);I(:,3)] <= zBody(j(end)))
+    elseif any(I(conx,3) <= zBody(j(end)))
         % Intersection below body
         reason = 4;
-    else
+    elseif any(P1(1) < (yBody(j).^2 + zBody(j).^2).^0.5)
         % Increase span
+        reason = 5;
+    
+    % Second (less refined) attempt
+    elseif P0(3) <= zBody(j(1))
+        reason = 3;
+    elseif P0(3) >= zBody(j(end))
+        reason = 4;
+    elseif P0(1) <= xBody(1)
+        reason = 1;
+    elseif P0(1) >= xBody(2)
+        reason = 2;
+    else
         reason = 5;
     end
 
