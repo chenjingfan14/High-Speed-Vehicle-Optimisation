@@ -116,7 +116,7 @@ end
 
 limits = zeros([plotFun 2]); % Initialise limits for graph output
 
-% Print iteration, mean for every fitness function, success rate
+% Print iteration, mean for every fitness function, numbber of PF particles
 nonDomFitBar = mean(initPFDisp,1);
 str = repmat('%3.4f ', 1, nFun);
 fprintf(['Iteration %i: Mean PF f(x): ' str ' nPF: %i \n'], 0, nonDomFitBar, nNonDomParticles);

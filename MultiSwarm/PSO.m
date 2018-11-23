@@ -1,4 +1,4 @@
-function [GlobalBestFit,GlobalBestPos] = PSO(cond,costFun,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,parallel)
+function [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
 %% Swarm
 
 % Maximum velocity particle can have per iteration
@@ -6,6 +6,8 @@ varMinMat = repmat(varMin,nPop,1);
 varMaxMat = repmat(varMax,nPop,1);
 
 varSize = [nPop nVar];
+
+history = zeros(maxIt, 3);
 
 %% Initialise
 
@@ -17,19 +19,13 @@ GlobalBestPos = zeros(maxIt+1,nVar);
 parPos = unifrnd(varMinMat,varMaxMat,varSize);
 parVel = zeros(varSize);
 
-% Impose conditions on particles
-[parPos,phyiscalPos] = conditioning(parPos,cond);
-
-% Assign 2D section matrices to particles. Foils variable = section indices
-foils = cond{5,2};
-sections = foilData(phyiscalPos(:,foils));
-
 % Calculate initial fitness functions
-[parFit,successCount] = costcaller(costFun,nPop,nFun,phyiscalPos,sections,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,parallel);
+[parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 
 parBestPos = parPos;
 parBestFit = parFit;
-GlobalBestFit(1) = max(parBestFit);
+[GlobalBestFit(1),bestID] = min(parBestFit);
+GlobalBestPos(1,:) = parBestPos(bestID,:);
 
 fcount = 1; % Figure counter
 
@@ -39,9 +35,11 @@ parFitDisp(:,inv) = inv(:,inv)./parFitDisp(:,inv);
 GlobalBestFitDisp = GlobalBestFit;
 GlobalBestFitDisp(:,inv) = inv(:,inv)./GlobalBestFitDisp(:,inv);
 
-% Print iteration, mean for every fitness function, success rate
-fitBar = mean(parFitDisp,1);
-fprintf('Iteration 0: Global Best: %3.4f Mean: %3.4f Stall: 0 Success rate: %3.2f \n', GlobalBestFitDisp(1), fitBar, (successCount/nPop)*100);
+% Print iteration, mean for every fitness function
+parFitBar = mean(parFitDisp,1);
+fprintf('Iteration 0: Global Best: %3.4f Mean: %3.4f Stall: 0 \n', GlobalBestFitDisp(1), parFitBar);
+
+history(1,:) = [0, GlobalBestFitDisp(1), 0];
 
 %% Main PSO Loop
 stall = 0;
@@ -64,11 +62,8 @@ for it = 2:maxIt+1
     parPos(con1) = varMaxMat(con1);
     parPos(con2) = varMinMat(con2);
     
-    [parPos,phyiscalPos] = conditioning(parPos,cond);
-    sections = foilData(phyiscalPos(:,foils));
-    
     % Calculate fitness functions
-    [parFit,successCount] = costcaller(costFun,nPop,nFun,phyiscalPos,sections,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,parallel);
+    [parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
     
     %% Update best particle/global fitness values and corresponding positions
     ind = parFit < parBestFit;
@@ -112,7 +107,9 @@ for it = 2:maxIt+1
     GlobalBestFitDisp(:,inv) = inv(:,inv)./GlobalBestFitDisp(:,inv);
     
     parFitBar = mean(parFitDisp,1);
-    fprintf('Iteration %i: Global Best: %3.4f Mean: %3.4f Stall: %i Success rate: %3.2f \n', it-1, GlobalBestFitDisp(it), parFitBar, stall, (successCount/nPop)*100);
+    fprintf('Iteration %i: Global Best: %3.4f Mean: %3.4f Stall: %i \n', it-1, GlobalBestFitDisp(it), parFitBar, stall);
+    
+    history(it,:) = [it-1, GlobalBestFitDisp(it), stall];
     
     if mod(it-1,fi)==0
         figure(fcount)
@@ -122,7 +119,7 @@ for it = 2:maxIt+1
         hold on
         xlabel('Iterations')
         ylabel('f(x)')
-        plot(1:it-1,GlobalBestFitDisp);
+        plot(1:it,GlobalBestFitDisp);
         hold off
         % Pause to display graph while simulation is running
         pause(0.00001)

@@ -221,7 +221,12 @@ if nFun == 1
     % Max stall values before simulation ends
     maxStall = 500;
     
-    [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    % Simplest Single-Objective PSO Algorithm
+    % [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    
+    % Smarter Single-Objective PSO Algorithm
+    [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+
 else
     
     inv = false(1,nFun);
@@ -241,4 +246,4 @@ time = toc;
 save('OptimisationResults')
 
 % Use this function to create output plots of configurations
-viewcaller(GlobalBestPos,cond,varArray,foilData,n,flow,options);
+% viewcaller(GlobalBestPos,cond,varArray,foilData,n,flow,options);

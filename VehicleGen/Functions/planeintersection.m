@@ -18,13 +18,24 @@ N = -(n(:,1).*w(:,1) + n(:,2).*w(:,2) + n(:,3).*w(:,3));
 
 % Compute the Isection parameter
 sI = N ./ D;
-I = round(P0 + sI*u,10);
+I = P0 + sI*u;
 
 conx = I(:,1) >= xBody(1) & I(:,1) <= xBody(2) | I(:,1) >= xBody(2) & I(:,1) <= xBody(1);
 cony = I(:,2) >= yBody(j) & I(:,2) <= yBody(j+1) | I(:,2) >= yBody(j+1) & I(:,2) <= yBody(j);
 conz = I(:,3) >= zBody(j) & I(:,3) <= zBody(j+1) | I(:,3) >= zBody(j+1) & I(:,3) <= zBody(j);
 
 inter = I(conx & cony & conz,:);
+
+% Sometimes needs to be rounded, so if first attempt returns empty, round
+if isempty(inter)
+    I = round(I,10);
+    
+    conx = I(:,1) >= xBody(1) & I(:,1) <= xBody(2) | I(:,1) >= xBody(2) & I(:,1) <= xBody(1);
+    cony = I(:,2) >= yBody(j) & I(:,2) <= yBody(j+1) | I(:,2) >= yBody(j+1) & I(:,2) <= yBody(j);
+    conz = I(:,3) >= zBody(j) & I(:,3) <= zBody(j+1) | I(:,3) >= zBody(j+1) & I(:,3) <= zBody(j);
+
+    inter = I(conx & cony & conz,:);
+end
 
 if isempty(inter)
 

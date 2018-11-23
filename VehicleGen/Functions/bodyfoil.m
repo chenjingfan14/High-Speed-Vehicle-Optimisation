@@ -84,9 +84,9 @@ for i=1:numAerofoils
         if isempty(inter)
             
             % Check what failed config looks like
-            % aerofoil.Points.x = foil(:,1:3:end);
-            % aerofoil.Points.z = foil(:,3:3:end);
-            % plotter([aftBody.Points,aerofoil.Points]);
+%             aerofoil.Points.x = foil(:,1:3:end);
+%             aerofoil.Points.z = foil(:,3:3:end);
+%             plotter([aftBody.Points,aerofoil.Points]);
             
             success = false;
             return

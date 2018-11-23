@@ -130,17 +130,24 @@ for i=wingDim:-1:1
             elseif any(reason == [1,5]) || attempt < 10
                 switch reason
                     case {1,2}
-                        xOffset = xOffset - 0.1*attempt*xOffset;
-                        parxOffset = parxOffset - 0.1*attempt*parxOffset;
                         
-                        if xOffset == 0 || (attempt > 5 && reason == 2)
-                            xOffset = xOffset + 0.1;
-                            parxOffset = parxOffset + 0.1;
+                        physical = [xOffset,chord(1)];
+                        particle = [parxOffset,parChord(1)];
+                        
+                        [~,use] = max(physical);
+                        
+                        if reason == 1
+                            xOffset = xOffset + 0.1*physical(use);
+                            parxOffset = parxOffset + 0.1*particle(use);
+                        
+                        else
+                            xOffset = xOffset - 0.1*physical(use);
+                            parxOffset = parxOffset - 0.1*particle(use);
                         end
                         
                     case {3,4}
-                        zOffset = zOffset - 0.1*attempt*zOffset;
-                        parzOffset = parzOffset - 0.1*attempt*parzOffset;
+                        zOffset = zOffset - 0.1*zOffset;
+                        parzOffset = parzOffset - 0.1*parzOffset;
                         
                         if zOffset == 0 || (attempt > 5 && reason == 4)
                             zOffset = zOffset + 0.1;

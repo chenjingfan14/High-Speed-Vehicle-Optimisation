@@ -25,4 +25,4 @@ options.viscous = true;
 options.control = false;
 
 % Initial baseline configuration to be analysed and used as reference vals
-options.baseline = true;
+options.baseline = false;
