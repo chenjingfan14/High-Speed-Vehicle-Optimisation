@@ -397,6 +397,7 @@ if any(numFoils)
     copMaxDiffbar = mean(copMaxDiff);
 
     Lbar = mean(L(:));
+    Dbar = mean(D(:));
     Cdbar = mean(Cd(:));
     Mbar = mean(rootMoment(:));
 
@@ -411,9 +412,9 @@ if any(numFoils)
         
         base = options.base;
         
-        constrain = [Mbar,cop];
-        minVal = [0,0];
-        maxVal = [base.RootMomentBar,base.copBar];
+        constrain = [Mbar,cop,Lbar];
+        minVal = [0,0,base.LiftBar];
+        maxVal = [base.RootMomentBar,base.copBar,inf];
     else
         constrain = [moment,cop];
         minVal = [0,0];
@@ -448,7 +449,9 @@ results.copBar = cop;
 results.RootMoment = rootMoment;
 results.RootMomentBar = Mbar;
 results.Lift = L;
+results.LiftBar = Lbar;
 results.Drag = D;
+results.DragBar = Dbar;
 %% To view created configuration, uncomment this
 % Leave commented during simulations, otherwise it will plot everything 
 % plotter(points,"pause")
