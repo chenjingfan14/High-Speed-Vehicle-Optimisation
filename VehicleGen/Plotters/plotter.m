@@ -1,4 +1,4 @@
-function plotter(pointStruct,varargin)
+function [figNum] = plotter(pointStruct,varargin)
 
 nCons = length(varargin);
 conArray = 1:nCons;
@@ -16,8 +16,12 @@ end
 pos = figureposition();
 
 figure
+
+currentFig = gcf;
+figNum = currentFig.Number;
+
 hold on
-set(gcf, 'Position', pos)
+set(currentFig, 'Position', pos)
 axis equal
 xlabel('x (m)')
 ylabel('y (m)')

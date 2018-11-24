@@ -252,4 +252,4 @@ time = toc;
 save('OptimisationResults')
 
 % Use this function to create output plots of configurations
-% viewcaller(GlobalBestPos,cond,varArray,foilData,n,flow,options);
+viewcaller(GlobalBestPos,cond,varArray,foilData,n,flow,options);
