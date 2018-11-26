@@ -1,8 +1,8 @@
 function [foilData,numDatFiles] = getaerofoilsecdata()
 
-foilFiles = struct2cell(dir('VehicleGen\Aerofoil_Sections'));
-
+foilFiles = struct2cell(dir([pwd '\VehicleGen\Aerofoil_Sections']));
 foilFiles = foilFiles(1,:);
+
 j=0;
 for i=1:length(foilFiles)
     if contains(foilFiles{i},["dat","DAT","Dat"])
@@ -13,6 +13,14 @@ for i=1:length(foilFiles)
     end
 end
 
-numDatFiles = j;
+if j ~= 0
+    numDatFiles = j;
+    
+else
+    % Try loading files
+    load('2DAerofoilSections.mat')
+    foilData = AerofoilSections;
+    numDatFiles = numel(foilData);
+end
 
 end
