@@ -118,8 +118,6 @@ for ii=1:dim1
     end
     
     first = find(newControl,1,'first');
-%     last = find(newControl,1,'last');
-%     newControl([first last]) = false;
     newControl(first) = false;
 
     %% Update points to include discretisation

@@ -58,6 +58,11 @@ if any(aftbodyCon)
     % Create aft body portion of body
     aftbody = arbitraryfuse(aftbodyPos,noseForeLength);
     
+    parameters.NoseL = noseForeLength;
+    parameters.BodyL = noseForeLength + aftBodyLength;
+    parameters.BodyW = aftbody.Width;
+    parameters.BodyH = aftbody.Height;
+    
 else % Set all body parts to empty
     aftbody = ''; forebody = ''; Nose = '';
 end
@@ -98,9 +103,11 @@ for i=wingDim:-1:1
     parxOffset = wingPar(xOffsetID);
     parzOffset = wingPar(zOffsetID);
     
-    if ~any(semispan)
-        semispan(1) = 2;
-        parSemispan(1) = 2;
+    % If first semispan = 0, give starting value so that wing can be
+    % created
+    if semispan == 0
+        semispan(1) = 0.1;
+        parSemispan(1) = 0.1;
     end
     
     % Create aerofoil
@@ -133,6 +140,10 @@ for i=wingDim:-1:1
         % Join body and aerofoil together
         [liftSurface,aftbody,success,reason] = bodyfoil(aftbody,liftSurface,[xOffset,zOffset]);
         
+        % Stop semispan getting too large, shouldn't need to be larger than
+        % maximum body radius
+        maxFirstSemispan = max(aftbody.Height,aftbody.Width)*2;
+        
         %% If unsuccessful, while loop to fix until it is successful
         while ~success
             
@@ -142,22 +153,35 @@ for i=wingDim:-1:1
             % If while loop is bouncing between fail reasons
             bouncing = all(diff(reasonHistory) ~= 0);
             
-            % If history of failure reasons is failed, and loop is bouncing
-            % between reasons, and loop hasn't been reduced fixFactor
-            % recently: reduce fixFactor & reset stayOut
+            % If history of failure reasons is filled, and loop is bouncing
+            % between reasons, and loop hasn't reduced fixFactor recently: 
+            % reduce fixFactor & reset stayOut
             if attempt > nHist && bouncing && stayOut >= 0
                 fixFactor = fixFactor/2;
                 stayOut = -nHist;
+            end
+            
+            % Sometimes straight unswept untapered wings cause issues
+            % when merging, so ensure first partition sweep is non-zero
+            if sweep(1) < 1
+                sweep(1) = 1;
+            end
+            
+            % Chord may get too low in "last resort" method, if so make all
+            % chord values equal to half the entire body length
+            if chord(1) < 1
+                chord(:) = parameters.BodyL/2;
             end
             
             if isempty(reason)
                 % Use to debug if configuration cannot be assembled
                 % reason
             
+                
             % Fixing for specific reasons. Will always go inside here if
             % wing/tail is before aftbody, or semispan must be increased.
             % Other failure reasons can be reduced by last resort below
-            elseif any(reason == [1,5]) || attempt < 10
+            elseif reason == 1 || (reason == 5 && semispan(1) < maxFirstSemispan) || attempt < 10
                 switch reason
                     case {1,2}
                         
@@ -221,11 +245,12 @@ for i=wingDim:-1:1
                 chord(1) = chord(1) - 0.1*chord(1);
                 parChord(1) = parChord(1) - 0.1*parChord(1);
                 
-                % Enforce taper <= 1
+                % Sometimes straight unswept untapered wings cause issues
+                % when merging, so ensure taper ratio is slightly < 1
                 for j = 2:numel(chord)
-                    if chord(j) > chord(j-1)
-                        chord(j) = chord(j-1);
-                        parChord(j) = parChord(j-1);
+                    if chord(j) >= chord(j-1)
+                        chord(j) = 0.99*chord(j-1);
+                        parChord(j) = 0.99*parChord(j-1);
                     end
                 end
                 
@@ -277,29 +302,38 @@ for i=wingDim:-1:1
         % Discretise aerofoils based on target length
         liftSurface = discwing(liftSurface);
         
-        if i == 1 % First liftSurface assumed to be wing
-        
-            wing = liftSurface(1);
-
-            sumArea = sum(wing.Area);
-            MAC = sum(wing.Area.*wing.MAC)/sumArea;
-
-            Aref = sumArea*2;
-            
-            wingspan = sum(wing.Span);
-        
-        end
     end
         
     
 end
 
-if ~any(wingCon)
+if any(wingCon)
     
-    Aref = aftbody.Area;
-    MAC = aftbody.Length/2;parameters.BodyW = aftbody.Width;
-    wingspan = [];
+    parameters.Chord = chord;
+    parameters.Semispan = semispan;
+    parameters.Sweep = sweep;
+    parameters.Dihedral = dihedral;
+    
+    if ~isempty(controlDim)
+        parameters.Control = control;
+    end
+    
+    % First liftSurface assumed to be wing
+    wing = liftSurface(1);
+    
+    sumArea = sum(wing.Area);
+    
+    parameters.MAC = sum(wing.Area.*wing.MAC)/sumArea;
+    parameters.Aref = sumArea*2;
+    parameters.Wingspan = sum(wing.Span);
+    
+else
+    
     liftSurface = '';
+    
+    parameters.Aref = aftbody.Area;
+    parameters.MAC = aftbody.Length/2;parameters.BodyW = aftbody.Width;
+    parameters.wingspan = [];
     
 end
 
@@ -328,14 +362,6 @@ if any(forebodyCon)
     forebody = foreGen(forebodyPos,nosePoints,radial,0.5);
     
 end
-
-parameters.Aref = Aref;
-parameters.Wingspan = wingspan;
-parameters.MAC = MAC;
-parameters.NoseL = noseForeLength;
-parameters.BodyL = noseForeLength + aftBodyLength;
-parameters.BodyW = aftbody.Width;
-parameters.BodyH = aftbody.Height;
 
 %% Put assembly into single cell, delete any empty parts
 assemblyProperties = {Nose,forebody,aftbody,liftSurface};

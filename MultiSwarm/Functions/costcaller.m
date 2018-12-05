@@ -8,7 +8,7 @@ Bezier = options.Bezier;
 
 [partArrays,sectionArray] = partIndexing(cond,varArray);
 
-[parPos,physicalPos] = conditioning(parPos,nPop,cond,varArray,options);
+[parPos,physicalPos] = contrans(parPos,nPop,cond,varArray,options);
 
 
 sectionPos = physicalPos(:,sectionArray);

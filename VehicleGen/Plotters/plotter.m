@@ -1,4 +1,4 @@
-function [figNum] = plotter(pointStruct,varargin)
+function plotter(pointStruct,varargin)
 
 nCons = length(varargin);
 conArray = 1:nCons;
@@ -148,7 +148,7 @@ for ii=1:nPoints
             which = plotDefs == "CoP";
             which = conArray(which);
             
-            CoP = str2num(plotDefs(which+1));
+            CoP = str2double(plotDefs(which+1));
         end
         
         plot3(CoP(1),CoP(2),CoP(3),'r.','markers',72)

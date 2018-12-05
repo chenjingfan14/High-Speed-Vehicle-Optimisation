@@ -1,4 +1,4 @@
-function figNum = particleviewer(assemblyProperties,num)
+function particleviewer(assemblyProperties,num)
 
 prev = 0;
 dimArray = zeros(100,1);
@@ -16,4 +16,4 @@ end
 
 title = ['Configuration ' num2str(num)];
 
-figNum = plotter(assemblyPoints,"title",title);
+plotter(assemblyPoints,"title",title);

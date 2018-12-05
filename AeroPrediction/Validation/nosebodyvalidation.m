@@ -11,8 +11,9 @@ AoA = [];
 % All available Mach number
 % Mach = [1.6,2.3,2.96,4.63]';
 
-% Chosen Mach numbers to compare
-Mach = [4.63]';
+% Chosen Mach numbers and altitudes to compare
+Mach = [4.63];
+alt = 32850;
 
 l = 0.508;
 % l = 10;
@@ -36,7 +37,7 @@ x = x*l;
 yzPanels = 25;
 theta = 0:pi/yzPanels:pi;
 
-options = simOptions();
+options = simoptions();
 
 complete = false;
 
@@ -199,7 +200,7 @@ for Case = dim:-1:1
         AoA = AoA(1:14);
     end
     
-    flow = flowparameters(AoA,Mach);
+    flow = flowparameters(options,AoA,Mach,alt);
     Mrange = [1:0.0001:10,10.1:0.1:100];
     PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
     

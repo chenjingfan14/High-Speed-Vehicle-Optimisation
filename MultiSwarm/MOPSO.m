@@ -264,8 +264,10 @@ for it = 2:maxIt+1
     history(it,:) = [it-1, nonDomFitBar, nNonDomParticles];
     
     if mod(it-1,fi)==0
-        maxf = max([nonDomFitDisp; initPFDisp]);
-        minf = min([nonDomFitDisp; initPFDisp]);
+        % Have max limits slightly above that of PF so that points are not
+        % lying on the edges
+        maxf = max(nonDomFitDisp,[],1)*1.2;
+        minf = min(nonDomFitDisp,[],1);
         figure(fcount)
         clf
         title(['Iteration: ' num2str(it-1)])
@@ -291,11 +293,13 @@ for it = 2:maxIt+1
         xlim(limits(1,:))
         ylim(limits(2,:))
         if nFun == 2
-            plot(initPFDisp(:,1), initPFDisp(:,2),'b*');
+            % Plots initial PF, may be too large to show on graph due to
+            % penalty functions implemented
+            % plot(initPFDisp(:,1), initPFDisp(:,2),'b*');
             plot(parFitDisp(:,1), parFitDisp(:,2),'k*');
             plot(nonDomFitDisp(:,1), nonDomFitDisp(:,2),'r*');
         else
-            plot3(initPFDisp(:,1), initPFDisp(:,2), initPFDisp(:,3),'b*');
+            % plot3(initPFDisp(:,1), initPFDisp(:,2), initPFDisp(:,3),'b*');
             plot3(parFitDisp(:,1), parFitDisp(:,2), parFitDisp(:,3),'k*');
             plot3(nonDomFitDisp(:,1), nonDomFitDisp(:,2), nonDomFitDisp(:,3),'r*');
             zlim(limits(3,:))
@@ -304,7 +308,7 @@ for it = 2:maxIt+1
         hold off
         % Pause to display graph while simulation is running
         pause(0.00001)
-        fcount=fcount+1;
+        fcount = fcount+1;
     end
     
     % Stops simulation if any Pareto Front values are not numeric 

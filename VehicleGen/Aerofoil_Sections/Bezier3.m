@@ -65,7 +65,7 @@ for i = 1:nSecs
 %         legend({'Upper','Lower','Upper Control Points','Lower Control Points'},'Location','northeast');
 %         hold off
         
-        foilData{j,i} = [Pxu, Pzu; Pxl, Pzl];
+        foilData{j,i} = [Pxu, Pzu; flipud([Pxl, Pzl])];
         
     end
 end

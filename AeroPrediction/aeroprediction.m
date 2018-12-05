@@ -38,7 +38,7 @@ control = options.control;
 baseline = options.baseline;
 
 for i=1:runs
-    %% Outer flight state loop 
+    %% Outer flight state loop
     
     run = flightstate(flow,i);
     
@@ -389,22 +389,39 @@ for i=1:runs
     
 end
 
+%% Find averages and save all results
+copMaxDiff = max(copx,[],1) - min(copx,[],1);
+copMaxDiffbar = mean(copMaxDiff);
+
+Lbar = mean(L(:));
+Dbar = mean(D(:));
+Cdbar = mean(Cd(:));
+Mbar = mean(rootMoment(:));
+
+cop = copMaxDiffbar/MAC;
+
+results.CN = CN;
+results.CA = CA;
+results.Cl = Cl;
+results.Cd = Cd;
+results.Cm = Cm;
+results.CoP = copCell;
+results.RootMoment = rootMoment;
+results.Lift = L;
+results.Drag = D;
+
+results.RootMomentBar = Mbar;
+results.LiftBar = Lbar;
+results.DragBar = Dbar;
+results.copBar = cop;
+
 %% Translate aerodynamic characteristics to cost function values
 % Usually non-dimensionalised
 
 if any(numFoils)
 
-    copMaxDiff = max(copx,[],1) - min(copx,[],1);
-    copMaxDiffbar = mean(copMaxDiff);
-
-    Lbar = mean(L(:));
-    Dbar = mean(D(:));
-    Cdbar = mean(Cd(:));
-    Mbar = mean(rootMoment(:));
-
-    lift = Lbar/wingspan;
-    moment = Mbar/wingspan;
-    cop = copMaxDiffbar/MAC;
+    % lift = Lbar/wingspan;
+    % moment = Mbar/wingspan;
     
     % Constraint section. Apply penalties if desired values are too
     % high/low
@@ -417,7 +434,7 @@ if any(numFoils)
         minVal = [0,0,base.LiftBar];
         maxVal = [base.RootMomentBar,base.copBar,inf];
     else
-        constrain = [moment,cop];
+        constrain = [Mbar,cop];
         minVal = [0,0];
         maxVal = [inf,0.5];
     end
@@ -429,135 +446,14 @@ if any(numFoils)
 %         penalty 
 %     end
     
-    cost = [1/lift,Cdbar] + penalty;
+    cost = [1/Lbar,Cdbar] + penalty;
     
     % If any cost less than zero, particle swarm will see it as optimal,
     % whereas none of these aerodynamic values should be less than zero
     infCon = cost < 0;
     
     cost(infCon) = inf;
+    
 else
     cost = [];
-end
-
-results.Cl = Cl;
-results.Cd = Cd;
-results.Cm = Cm;
-results.CN = CN;
-results.CA = CA;
-results.CoP = copCell;
-results.copBar = cop;
-results.RootMoment = rootMoment;
-results.RootMomentBar = Mbar;
-results.Lift = L;
-results.LiftBar = Lbar;
-results.Drag = D;
-results.DragBar = Dbar;
-%% To view created configuration, uncomment this
-% Leave commented during simulations, otherwise it will plot everything 
-% plotter(points,"pause")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-%% Plot Data: Leave commented when running optimisations
-% Plot Cl, Cl etc against angle of attack for all flight states
-
-% for i = size(MinfMat,2):-1:1
-%     legStr{i} = ['Mach: ' num2str(MinfMat(1,i))];
-% end
-% 
-% figure
-% hold on
-% grid on
-% plot(alphaMat,CN)
-% xlabel('Angle of Attack')
-% ylabel('C_N')
-% legend(legStr)
-% hold off
-% 
-% figure
-% hold on
-% grid on
-% plot(alphaMat,CA)
-% xlabel('Angle of Attack')
-% ylabel('C_A')
-% legend(legStr)
-% hold off
-% 
-% figure
-% hold on
-% grid on
-% plot(alphaMat,Cm)
-% xlabel('Angle of Attack')
-% ylabel('C_m')
-% legend(legStr)
-% hold off
-% 
-% figure
-% hold on
-% grid on
-% plot(alphaMat,Cl)
-% xlabel('Angle of Attack')
-% ylabel('C_L')
-% legend(legStr)
-% hold off
-% 
-% figure
-% hold on
-% grid on
-% plot(alphaMat,Cd)
-% xlabel('Angle of Attack')
-% ylabel('C_D')
-% legend(legStr)
-% hold off
-
-% figure
-% hold on
-% grid on
-% plot(alphaMat,rootMoment)
-% xlabel('Angle of Attack')
-% ylabel('Root Bending Moment')
-% legend(legStr)
-% hold off
-
-%% Plots Cp at every radial location of body
-% Produces hundreds of figures so leave commented during simulations
-
-% data = [AoA', CN, CA, Cm];
-
-% for ii=1:dim
-%     
-%     meanRadLoc = mean(bodyRadLoc{ii},1);
-%     
-%     [chordPanels,spanPanels] = size(bodyCp{ii});
-%     x = 0:1/(chordPanels-1):1;
-%     for jj=1:spanPanels
-%         
-%         location = round(meanRadLoc(jj),1);
-%         
-%         figure
-%         hold on
-%         grid on
-%         title(['Body chordwise pressure coefficient at ' num2str(location) '^o'] );
-%         plot(x,bodyCp{ii}(:,jj))
-%         xlabel('x')
-%         ylabel('Cp')
-%     end
-% end
 end

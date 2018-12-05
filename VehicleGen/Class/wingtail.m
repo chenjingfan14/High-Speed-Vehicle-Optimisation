@@ -104,7 +104,7 @@ classdef wingtail
             end
             
             %% Control surfaces
-            if nargin == 7
+            if exist('control','var')
                 
                 bhControl = (sum(semispan) * control([1 2]));
                 

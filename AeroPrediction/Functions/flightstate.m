@@ -1,37 +1,33 @@
 function run = flightstate(flow,i)
-%% Flow conditions 
-
+%% Flow conditions for specific flight state
 run = flow;
 
-index = flow.ParameterIndex;
-
-alphaDep = index(i,1);
-MachDep = index(i,2);
-altDep = index(i,3);
-deltaDep = index(i,4);
-
-Minf = flow.Minf(MachDep);
-alpha = flow.alpha(alphaDep) * pi/180;
-a = flow.a(altDep);
+Minf = flow.Minf(i);
+alpha = flow.alpha(i) * pi/180;
+a = flow.a(i);
 
 Uinf = Minf * a;
 
 planeAngles = [alpha 0 pi/2-alpha];
     
-run.delq = flow.delq(MachDep);
-run.Machq = flow.Machq(MachDep);
+run.delq = flow.delq(i);
+run.Machq = flow.Machq(i);
 
 run.alpha = alpha;
 run.Minf = Minf;
-run.delta = flow.delta(deltaDep) * pi/180;
+
+if ~isempty(flow.delta)
+    run.delta = flow.delta(i) * pi/180;
+end
+
 run.U = Uinf*[cos(alpha) 0 sin(alpha)];
 run.Uinf = Uinf;
-run.Pinf = flow.Pinf(altDep);
-run.rho = flow.rho(altDep);
-run.Tinf = flow.Tinf(altDep);
-run.mu = flow.mu(altDep);
-run.a = flow.a(altDep);
-run.Pr = flow.Pr(altDep);
+run.Pinf = flow.Pinf(i);
+run.rho = flow.rho(i);
+run.Tinf = flow.Tinf(i);
+run.mu = flow.mu(i);
+run.a = flow.a(i);
+run.Pr = flow.Pr(i);
 
 % Angles between planes
 run.planeAngles = planeAngles;
