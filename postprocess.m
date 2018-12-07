@@ -29,12 +29,16 @@ atOnce = 5;
 [~,configVar] = size(configInputs);
 [~,nVar] = size(varMin);
 
+%% FIX: Some of the configuration corrector stuff is taking values out varMin/varMax. Thus postprocess assumes values are actual dimensions whereas some need to be transformed as they are ratios
+
 if configVar == nVar
-    outwith = configInputs < varMin | configInputs > varMax;
+%     outwith = configInputs < varMin | configInputs > varMax;
+    outwith = false;
 else
     outwith = true;
 end
 
+%%
 if (exist('isDirect','var') && isDirect) || any(outwith(:))
     disp('Variables assumed to be actual configuration measurements')
     physicalPos = configInputs;

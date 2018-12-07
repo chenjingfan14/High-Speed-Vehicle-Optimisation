@@ -9,7 +9,7 @@ addpath(genpath('AeroPrediction'))
 % Number of processors to be used (up to 4 on desktop)
 nProc = 1;
 costFun = @aeroprediction; % Cost function caller
-options = simoptions(nProc);
+options = simOptions(nProc);
 
 parallel = options.parallel;
 Bezier = options.Bezier;
