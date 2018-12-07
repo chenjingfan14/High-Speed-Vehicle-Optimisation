@@ -6,7 +6,7 @@ parFit = zeros([nPop, nFun]);
 % Impose conditions on particles
 Bezier = options.Bezier;
 
-[partArrays,sectionArray] = partIndexing(cond,varArray);
+% [partArrays,sectionArray] = partIndexing(cond,varArray);
 
 [parPos,physicalPos] = contrans(parPos,nPop,cond,varArray,options);
 

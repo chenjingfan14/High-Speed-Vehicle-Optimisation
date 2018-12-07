@@ -1,7 +1,7 @@
 function flow = flowparameters(options,alpha,Mach,alt,delta)
 %% Flow conditions for all flight states
 
-control = options.control;
+control = options.Control;
 
 %% Check if inputs have been provided
 % If so, bypass. If not, give pre-determined values

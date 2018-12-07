@@ -32,10 +32,10 @@ foilCp = cell(dim(1),dim(2),numFoils);
 
 % Option to analyse panels that lay in shadow of prior panels (flow
 % direction wise) as shadow instead of impact
-shielding = options.shielding;
-viscous = options.viscous;
-control = options.control;
-baseline = options.baseline;
+shielding = options.Shielding;
+viscous = options.Viscous;
+control = options.Control;
+baseline = options.Baseline;
 
 for i=1:runs
     %% Outer flight state loop
@@ -428,7 +428,7 @@ if any(numFoils)
     
     if baseline
         
-        base = options.base;
+        base = options.Base;
         
         constrain = [Mbar,cop,Lbar];
         minVal = [0,0,base.LiftBar];

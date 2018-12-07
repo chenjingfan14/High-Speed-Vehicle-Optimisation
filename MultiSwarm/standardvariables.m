@@ -1,65 +1,236 @@
-function [varMin,varMax] = standardvariables(con,n,options,varMin,varMax)
+function [varMin,varMax] = standardvariables(con,n,options,varMin,varMax,nVar,varArray)
 %% Standardised variables to be held constant during optimisation
 
-% variCons = {"Variables",    "Num Of",   "Conditions"    'Transformations';...
-%     "Dihedral",             "~",        "~",            '~';...
-%     "Chord",                n+1,        "< Previous",   '.*AftLength';...
-%     "LESweep",              n,          "~"             '~';...
-%     "Semispan",             n,          "Minimum 0.5",  '~';...            
-%     "Section",              n+1,        "Floor",        '~';...
-%     "xOffset",              "~",        "~",            '.*AftLength';...
-%     "zOffset",              "~",        "~"             '.*AftHeight/2';...
-%     "UpperLength",          "~",        "~",            '~';...
-%     "yUpperRad",            "~",        "~",            '~';...
-%     "yBotRatio",            "~",        "~",            '~';...
-%     "zUpperRad",            "~",        "~",            '~';...
-%     "SideLength",           "~",        "~",            '~';...
-%     "zLowerRad",            "~",        "~",            '~';...
-%     "AftLength",            "~",        "~",            '~';...
-%     "NoseRad",              "~",        "~",            '~';...
-%     "NoseLength",           "~",        "~",            '.*NoseRad';...
-%     "zNoseOffset",          "~",        "~",            '.*AftHeight/2';...
-%     "ForeLength",           "~",        "~",            '~'};
+% X-34 Body (reverse-transformed, ie. if transformations in
+% conditioning change these also need to)
+Definition = {...
+    "Variables",        "Standard Value"};
+
+wingDefs = {...
+    "Dihedral",         5;
+    "Chord",            0.8;
+    "LESweep",          40;
+    "Semispan",         2;
+    "Section",          [];
+    "xOffset",          0;
+    "zOffset",          0};
+
+aftDefs = {...
+    "UpperLength",      0;
+    "yUpperRad",        0.88;
+    "yBotRatio",        0.1;
+    "zUpperRad",        0.88;
+    "SideLength",       0.759;
+    "zLowerRad",        0.05;
+    "AftLength",        11.8956};
+
+% Cylindrical Aftbody
+% standardAft = {...
+%     "UpperLength",      0;
+%     "yUpperRad",        1;
+%     "yBotRatio",        1;
+%     "zUpperRad",        1;
+%     "SideLength",       0;
+%     "zLowerRad",        1;
+%     "AftLength",        8};
+
+foreDefs = {...
+    "ForeLength",       4.4238};
+
+noseDefs = {...
+    "NoseRad",          0.155;
+    "NoseLength",       0.7193;
+    "zNoseOffset",     -0.6};
+
+controlDefs = {...
+    "ControlSpan",     [0.4,0.7];
+    "ControlChord",     0.7};
 
 Bezier = options.Bezier;
-control = options.control;
-baseline = options.baseline;
+Wing = options.Wing;
+Control = options.Control;
+baseline = options.Baseline;
 
-stanChord = repmat(0.8,1,n+1);
-stanLESweep = repmat(40,1,n);
-stanSemispan = [2, repmat(1,1,n-1)];
+dimArray = (1:nVar)';
 
-if Bezier
-    stanSection = [1, 0.9, 0.7, 0.5, 0.3, 0,  0, 1, 0.9, 0.7, 0.5, 0.3, 0, 0,  0, 0.035, 0.04, 0.07, 0.04, 0.05, 0,  0, -0.015, -0.02, -0.05, -0.02, -0.05, 0];
-else
-    stanSection = 1;
+if Wing
+    
+    if Bezier
+        str = "Bezier";
+        SectionDefinition = [1, 0.9, 0.7, 0.5, 0.3, 0,  0, 1, 0.9, 0.7, 0.5, 0.3, 0, 0,  0, 0.035, 0.04, 0.07, 0.04, 0.05, 0,  0, -0.015, -0.02, -0.05, -0.02, -0.05, 0];
+    else
+        str = "Section";
+        SectionDefinition = 1;
+    end
+    
+    % Find which set of variables correspond to 2D aerofoil sections
+    for i=size(wingDefs,1):-1:1
+        secDef(i) = wingDefs{i,1} == str;
+    end
+    
+    % And Insert definition
+    wingDefs{secDef,2} = SectionDefinition;
+    
+    Definition = [Definition; wingDefs];
 end
 
-stanSection = repmat(stanSection,1,n+1);
-standardWing = [0, stanChord, stanLESweep, stanSemispan, stanSection, 0,0];
+if Aft
+    Definition = [Definition; aftDefs];
+end
+
+if Fore
+    Definition = [Definition; foreDefs];
+end
+
+if Nose
+    Definition = [Definition; noseDefs];
+end
+
+if Control
+    Definition = [Definition; controlDefs];
+end
 
 if baseline
     
     base = options.base;
-    standardBody = base.Body;
-
+    baseVariables = base.Variables;
+    baseVarArray = base.VarArray;
+    basePartitions = base.nPartitions;
+    baseSections = basePartitions + 1;
+    baseBezier = base.Bezier;
+    basenVar = base.nVar;
+    
+    partitions = (1:n)';
+    sections = (1:n+1)';
+    
+    chordArray = dimArray(varArray == "Chord");
+    sweepArray = dimArray(varArray == "LESweep");
+    spanArray = dimArray(varArray == "Semispan");
+    sectionArray = dimArray(any(varArray == ["Section","Bezier"],2));
+    
+    [chordPrint,sweepPrint,spanPrint,sectionPrint] = deal(false);
+    
+    for i = 1:nVar
+        
+        if con(i)
+            
+            % If yes, sections wish to be set as stardard. Must check that
+            % optimisation variables and base variables are the same for the wing
+            % (in terms of nPartitions) otherwise will not work
+            if varArray(i) == "Chord"
+                
+                j = i - chordArray == 0;
+                
+                if sections(j) <= baseSections
+                    
+                    baseChord = baseVariables(baseVarArray == "Chord");
+                    
+                    varMin(i) = baseChord(j);
+                    varMax(i) = baseChord(j);
+                    
+                else
+                    if ~chordPrint
+                        fprintf('Base chord used outboard until section %i \n', baseSections)
+                        chordPrint = true;
+                    end
+                    varMin(i) = stanChord;
+                    varMax(i) = stanChord;
+                end
+                
+                %% REPEAT ABOVE
+                
+            elseif varArray(i) == "LESweep"
+                
+                j = i - sweepArray == 0;
+                
+                if partitions(j) <= basePartitions
+                    
+                    baseSweep = baseVariables(baseVarArray == "LESweep");
+                    
+                    varMin(i) = baseSweep(j);
+                    varMax(i) = baseSweep(j);
+                    
+                else
+                    if ~sweepPrint
+                        fprintf('Base sweep used outboard until partition %i \n', basePartitions)
+                        sweepPrint = true;
+                    end
+                    varMin(i) = stanLESweep;
+                    varMax(i) = stanLESweep;
+                    
+                end
+                
+            elseif varArray(i) == "Semispan"
+                
+                j = i - spanArray == 0;
+                
+                if partitions(j) <= basePartitions
+                    
+                    baseSpan = baseVariables(baseVarArray == "Semispan");
+                    
+                    varMin(i) = baseSpan(j);
+                    varMax(i) = baseSpan(j);
+                else
+                    if ~spanPrint
+                        fprintf('Base semispan used outboard until partition %i \n', basePartitions)
+                        spanPrint = true;
+                    end
+                    varMin(i) = stanSemispan;
+                    varMax(i) = stanSemispan;
+                end
+                
+                % Same as before although must also be defined same as optimisation
+                % variables in terms of sections or Bezier curves
+            elseif any(varArray(i) == ["Section","Bezier"],2)
+                
+                j = i - sectionArray == 0;
+                
+                if Bezier == baseBezier
+                    
+                    if sections(j) <= baseSections
+                        
+                        baseSec = baseVariables(any(baseVarArray == ["Section","Bezier"],2));
+                        baseSec = reshape(baseSec,n,[]);
+                        
+                        varMin = [varMin, baseSec(:,j)];
+                        varMax = [varMax, baseSec(:,j)];
+                    else
+                        if ~sectionPrint
+                            fprintf('Base sections used outboard until section %i \n', baseSections)
+                            sectionPrint = true;
+                        end
+                        varMin = [varMin, stanSection];
+                        varMax = [varMax, stanSection];
+                        
+                    end
+                    
+                else
+                    if ~sectionPrint
+                        fprintf('Standard sections cannot be set by base configuration due to \ndiffering definitions. \nUsing back-up standard variables instead \n')
+                        sectionPrint = true;
+                    end
+                    varMin = [varMin, stanSection];
+                    varMax = [varMax, stanSection];
+                    
+                end
+                
+            else
+                
+                replace = varArray(i);
+                j = baseVarArray == replace;
+                
+                varMin(i) = baseVariables(j);
+                varMax(i) = baseVariables(j);
+                
+            end
+        end
+    end
+    
 else
     
-    % Cylindrical body
-%     standardBody = [0,1,1, 1,0,1, 8, 0.25,0.25,0, 4];
-    
-    % X-34 Body (reverse-transformed, ie. if transformations in 
-    % conditioning change these also need to)
-    standardBody = [0,0.88,0.1, 0.88,0.759,0.05, 11.8956, 0.155,0.7193,-0.6, 4.4238];
+    % If no baseline specific, replace all desired variables with standard
+    % ones specified above
+    varMin(con) = Definition(con);
+    varMax(con) = Definition(con);
     
 end
-
-standardVar = [standardWing,standardBody];
-
-if control
-    stanControl = [0.4,0.7,0.7];
-    standardVar = [standardVar, stanControl];
-end
-
-varMin(con) = standardVar(con);
-varMax(con) = standardVar(con);

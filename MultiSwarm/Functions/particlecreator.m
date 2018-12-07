@@ -1,62 +1,36 @@
-function [assemblyProperties,parPos,parameters] = particlecreator(parPos,configPos,partArrays,sections)
+function [assemblyProperties,parPos,parameters] = particlecreator(parPos,configPos,varArray,sections,options)
 %% Assembles arbitrary configuration
 % Will fuse together multiple aerofoil sections with body. Will also work
 % for aerofoil alone or body alone configurations
 
-%% Find where different parts exist within configuration
-% Initialise existence of parts as false
-[dim,~] = size(partArrays);
-
-[wingCon,aftbodyCon,forebodyCon,noseCon,controlCon] = deal(false(dim,1));
-
-% Loop through configuration and set parts to true at that point in the
-% configuration cell when part name = "Wing" or "Nose" etc
-for i = 1:dim
-    wingCon(i) = strcmp(partArrays{i,1},"Wing") | strcmp(partArrays{i,1},"Tail");
-    aftbodyCon(i) = strcmp(partArrays{i,1},"Aftbody");
-    forebodyCon(i) = strcmp(partArrays{i,1},"Forebody");
-    noseCon(i) = strcmp(partArrays{i,1},"Nose");
-    controlCon(i) = strcmp(partArrays{i,1},"Control");
-end
-
-% Turn 1:dim logicals into indexes containing only numbers where said part
-% type resides
-array = 1:dim;
-wingDim = array(wingCon);
-aftbodyDim = array(aftbodyCon);
-forebodyDim = array(forebodyCon);
-noseDim = array(noseCon);
-controlDim = array(controlCon);
+Wing = options.Wing;
+Aft = options.Aft;
+Fore = options.Fore;
+Nose = options.Nose;
+Control = options.Control;
 
 %% Create body
 % Check if body is part of configuration, if so build it, if not set body
 % parts to empty. Currently aftbody defines body existence, and if it does
 % nose and forebody must also exist
 
-if any(aftbodyCon)
+if Aft
     
-    % Again initialise correct indices along with their physical defition
-    % for each body part
-    aftbodyStr = partArrays{aftbodyDim,2};
-    forebodyStr = partArrays{forebodyDim,2};
-    noseStr = partArrays{noseDim,2};
+    geom = ["UpperLength","yUpperRad","yBotRatio","zUpperRad",...
+        "SideLength","zLowerRad"];
     
-    aftbodyArray = partArrays{aftbodyDim,3};
-    forebodyArray = partArrays{forebodyDim,3};
-    noseArray = partArrays{noseDim,3};
+    % Assign correct variables to their definitions
+    noseLength = configPos(varArray == "NoseLength");
+    noseRad = configPos(varArray == "NoseRad");
+    zNoseOff = configPos(varArray == "zNoseOffset");
+    foreBodyLength = configPos(varArray == "ForeLength");
+    aftbodyGeom = configPos(any(varArray == geom,2));
+    aftBodyLength = configPos(varArray == "AftLength");
     
-    aftbodyPos = configPos(aftbodyArray);
-    forebodyPos = configPos(forebodyArray);
-    nosebodyPos = configPos(noseArray);
-    
-    noseLength = nosebodyPos(noseStr == "NoseLength");
-    noseRad = nosebodyPos(noseStr == "NoseRad");
-    foreBodyLength = forebodyPos(forebodyStr == "ForeLength");
     noseForeLength = noseLength + foreBodyLength;
     
-    aftBodyLength = aftbodyPos(aftbodyStr == "AftLength");
     % Create aft body portion of body
-    aftbody = arbitraryfuse(aftbodyPos,noseForeLength);
+    aftbody = arbitraryfuse([aftbodyGeom,aftBodyLength],noseForeLength);
     
     parameters.NoseL = noseForeLength;
     parameters.BodyL = noseForeLength + aftBodyLength;
@@ -70,56 +44,54 @@ end
 %% Create aerofoils
 % If no aerofoils in configuration, loop will be skipped as dim = 0
 % Count back from number of aerofoils for preallocation purposes
+
+% Update later to include tail
+if Wing
+    wingDim = 1;
+end
+
 for i=wingDim:-1:1
     
-    % Initialise what indices of configPos refer to wing, along with what
-    % each position physcially is (eg. "Chord", "Semispan" etc)
-    wingStr = partArrays{wingDim,2};
-    wingArray = partArrays{wingDim,3};
-    
-    % Use above indices to take only wing related parameters for configPos
-    wingPos = configPos(wingArray);
-    wingPar = parPos(wingArray);
-    
-    dihedralID = wingStr == "Dihedral";
-    chordID = wingStr == "Chord";
-    sweepID = wingStr == "LESweep";
-    semispanID = wingStr == "Semispan";
-    xOffsetID = wingStr == "xOffset";
-    zOffsetID = wingStr == "zOffset";
+    dihedralVar = varArray == "Dihedral";
+    chordVar = varArray == "Chord";
+    sweepVar = varArray == "LESweep";
+    semispanVar = varArray == "Semispan";
+    xOffsetVar = varArray == "xOffset";
+    zOffsetVar = varArray == "zOffset";
     
     % Assign variables to their physical attribute
-    dihedral = wingPos(dihedralID);
-    chord = wingPos(chordID);
-    sweep = wingPos(sweepID);
-    semispan = wingPos(semispanID);
-    xOffset = wingPos(xOffsetID);
-    zOffset = wingPos(zOffsetID);
+    dihedral = configPos(dihedralVar);
+    chord = configPos(chordVar);
+    sweep = configPos(sweepVar);
+    semispan = configPos(semispanVar);
+    xOffset = configPos(xOffsetVar);
+    zOffset = configPos(zOffsetVar);
     
-    parDihedral = wingPar(dihedralID);
-    parChord = wingPar(chordID);
-    parSweep = wingPar(sweepID);
-    parSemispan = wingPar(semispanID);
-    parxOffset = wingPar(xOffsetID);
-    parzOffset = wingPar(zOffsetID);
+    % As well as their "particle" attribute which may need to be updated if
+    % configuration cannot be created
+    parDihedral = parPos(dihedralVar);
+    parChord = parPos(chordVar);
+    parSweep = parPos(sweepVar);
+    parSemispan = parPos(semispanVar);
+    parxOffset = parPos(xOffsetVar);
+    parzOffset = parPos(zOffsetVar);
     
     % If first semispan = 0, give starting value so that wing can be
     % created
-    if semispan == 0
+    if semispan(1) == 0
         semispan(1) = 0.1;
         parSemispan(1) = 0.1;
     end
     
     % Create aerofoil
-    if isempty(controlDim)
-        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
-    else
-        controlArray = partArrays{controlDim,3};
-        control = configPos(controlArray);
+    if Control
+%         control = configPos(varArray == ");
         liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
+    else
+        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
     end
     
-    if any(aftbodyCon)
+    if Aft
         
         % Factor to determine how much the wing/tail is shifted in 
         % necessary direction
@@ -217,17 +189,10 @@ for i=wingDim:-1:1
                             parzOffset = parzOffset + fixFactor;
                         end
                         
-                    case 5
+                    case 5 % Increase semispan
                         
-                        % If inboard semispan = 0, it will not increase
-                        % below, thus add small number to make it non-zero
-                        if semispan(1) == 0
-                            semispan(1) = 0.1;
-                            parSemispan(1) = 0.1;
-                        else % Increase semispan
-                            semispan(1) = semispan(1) + 0.1*semispan(1);
-                            parSemispan(1) = parSemispan(1) + 0.1*parSemispan(1);
-                        end
+                        semispan(1) = semispan(1) + 0.1*semispan(1);
+                        parSemispan(1) = parSemispan(1) + 0.1*parSemispan(1);
                             
                         if isempty(controlDim)
                             liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
@@ -255,10 +220,10 @@ for i=wingDim:-1:1
                 end
                 
                 % Re-create aerofoil
-                if isempty(controlDim)
-                    liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
-                else
+                if Control
                     liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
+                else
+                    liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
                 end
                 
             end
@@ -285,19 +250,19 @@ for i=wingDim:-1:1
         liftSurface.Offset = [xOffset,zOffset];
         
         % Feedback particle and physical positions to optimiser
-        parPos(wingArray(dihedralID)) = parDihedral;
-        parPos(wingArray(semispanID)) = parSemispan;
-        parPos(wingArray(chordID)) = parChord;
-        parPos(wingArray(sweepID)) = parSweep;
-        parPos(wingArray(xOffsetID)) = parxOffset;
-        parPos(wingArray(zOffsetID)) = parzOffset;
+        parPos(dihedralVar) = parDihedral;
+        parPos(semispanVar) = parSemispan;
+        parPos(chordVar) = parChord;
+        parPos(sweepVar) = parSweep;
+        parPos(xOffsetVar) = parxOffset;
+        parPos(zOffsetVar) = parzOffset;
 
-        configPos(wingArray(dihedralID)) = dihedral;
-        configPos(wingArray(semispanID)) = semispan;
-        configPos(wingArray(chordID)) = chord;
-        configPos(wingArray(sweepID)) = sweep;
-        configPos(wingArray(xOffsetID)) = xOffset;
-        configPos(wingArray(zOffsetID)) = zOffset;
+        configPos(dihedralVar) = dihedral;
+        configPos(semispanVar) = semispan;
+        configPos(chordVar) = chord;
+        configPos(sweepVar) = sweep;
+        configPos(xOffsetVar) = xOffset;
+        configPos(zOffsetVar) = zOffset;
         
         % Discretise aerofoils based on target length
         liftSurface = discwing(liftSurface);
@@ -307,14 +272,14 @@ for i=wingDim:-1:1
     
 end
 
-if any(wingCon)
+if Wing
     
     parameters.Chord = chord;
     parameters.Semispan = semispan;
     parameters.Sweep = sweep;
     parameters.Dihedral = dihedral;
     
-    if ~isempty(controlDim)
+    if Control
         parameters.Control = control;
     end
     
@@ -337,7 +302,7 @@ else
     
 end
 
-if any(forebodyCon)
+if Fore
     
         % Find radial aft body points for fore body interpolation
     % size-1 for panel based over
@@ -355,11 +320,11 @@ if any(forebodyCon)
         nosePoints.y = zeros(1,dim_f);
         nosePoints.z = zeros(1,dim_f);
     else
-        Nose = nose(nosebodyPos,dim_f,noseForeLength);
+        Nose = nose([noseRad,noseLength,zNoseOff],dim_f,noseForeLength);
         nosePoints = Nose.Points;
     end
     
-    forebody = foreGen(forebodyPos,nosePoints,radial,0.5);
+    forebody = foreGen(foreBodyLength,nosePoints,radial,0.5);
     
 end
 

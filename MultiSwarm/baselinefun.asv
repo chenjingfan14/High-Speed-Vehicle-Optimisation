@@ -12,10 +12,19 @@ options.Baseline = false;
 % held cosntant)
 isDirect = true;
 
+Wing = options.Wing;
+Aft = options.Aft;
+Fore = options.Fore;
+Nose = options.Nose;
+Control = options.Control;
+
+% Number of wing partitions
+n = 2;
+
 % No conditions required. However if variables are being input directly
 % (ie. not being transformed same as initialisation variCons) then inverse
 % transforms must be done here
-Definition = {...
+variCons = {...
     "Variables",    "Values"};
     
 wingDefs = {...
@@ -23,7 +32,7 @@ wingDefs = {...
     "Chord",       [13.85, 4.387, 1.5241];
     "LESweep",     [80, 45];
     "Semispan",    [0.744+0.88, 2.62686];           
-    "Section",     ["FSPLStrake", "FSPLND", "FSPLND"];
+    "Section",     ["FSPLStrake", "FSPLND"];
     "xOffset",     -3.5;
     "zOffset",     -0.74};
 
@@ -48,39 +57,34 @@ controlDefs = {...
     "ControlSpan", [0.4,0.7];
     "ControlChord", 0.7};
 
-Wing = options.Wing;
-Aft = options.Aft;
-Fore = options.Fore;
-Nose = options.Nose;
-Control = options.Control;
-
 if Wing
-    Definition = [Definition; wingDefs];
+    variCons = [variCons; wingDefs];
 end
 
 if Aft
-    Definition = [Definition; aftDefs];
+    variCons = [variCons; aftDefs];
 end
 
 if Fore
-    Definition = [Definition; foreDefs];
+    variCons = [variCons; foreDefs];
 end
 
 if Nose
-    Definition = [Definition; noseDefs];
+    variCons = [variCons; noseDefs];
 end
 
 if Control
-    Definition = [Definition; controlDefs]; 
+    variCons = [variCons; controlDefs]; 
 end
 
 
 [foilData,~] = getaerofoilsecdata();
 
-[cond,varArray,baseVar] = translateOpt(Definition);
+[cond,varArray,~] = translate(variCons);
+% [partArrays,sectionArray] = partIndexing(cond,varArray);
 
 sectionPos = baseVar(:,any(varArray == ["Section","Bezier"],2));
-sections = foilData(sectionPos,2);
+sections = foilData(sectionPos);
 
 % [wingDim,aftbodyDim,forebodyDim,noseDim,controlDim] = findparts(partArrays);
 

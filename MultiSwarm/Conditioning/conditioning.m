@@ -1,7 +1,6 @@
 function [initialPos] = conditioning(initialPos,nPop,cond)
 %% Function introduces conditions and ensures they are met
-% Conditions placed on particle positions, translated to physical positions
-% by ratios eg. physicalPos(wingroot) = parPos(wingroot)*aftfuselagelength
+% Conditions placed on particle positions
 
 [dim,~] = size(cond);
 
