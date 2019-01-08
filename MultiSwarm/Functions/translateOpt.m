@@ -1,85 +1,41 @@
-function [condCell,varArray,var1,var2,nVar] = translate(variCons)
+function [condCell,varArray,var1,var2,nVar] = translateOpt(variCons)
 %% Conditioning initialisation
 % Creates cell to be read for conditioning and indexing purposes
 
-[dim1,dim2] = size(variCons);
+[rows,cols] = size(variCons);
+colArray = 1:cols;
 
 preVar = 0;
 
-condCell = cell(dim1-1,dim2);
+condCell = cell(rows-1,6);
 
 var1 = [];
 var2 = [];
 
-foilData = getaerofoilsecdata();
-
-[nFoils,~] = size(foilData);
-
 % Grab titles
-for i=dim2:-1:1
+for i=cols:-1:1
+    
     Headers(i) = variCons{1,i};
 end
 
 % Should always exist regardless
 nameCol = Headers == "Variables";
+valCol = any(Headers == ["VarMin","VarMax","Values"]');
 
-% One of should exist
-numCol = Headers == "Num Of";
-
-if any(numCol)
-    getDim = false;
-else
-    numCol = Headers == "Values";
-    getDim = true;
-end
+valColArray = colArray(valCol);
 
 % May only exist for optimisation variables (not baseline or standard)
-minCol = Headers == "VarMin";
-maxCol = Headers == "VarMax";
 conCol = Headers == "Conditions";
 transCol = Headers == "Transformations";
 
-%% VARMIN FOR OPT == VALUES FOR BASE/STANDARD. DO SOMETHING ABOUT IT
-
-for i=2:dim1
+for i=2:rows
     
     row = i - 1;
     
     name = variCons{i,nameCol};
-    num = variCons{i,numCol};
-        
-    if isnumeric(num)
-        
-    elseif num == "~"
-        
-        num = 1;
-        
-    else
-        
-        for j = length(num):-1:1
-            
-            
-            for k = 1:nFoils
-                
-                str = foilData{k,1};
-                
-                if contains(str,num(j))
-                    newVal(j) = k;
-                    break
-                end
-                
-            end
-        end
-        
-        num = newVal;
-        
-    end
+    val = variCons{i,valCol};
     
-    if getDim
-        var = numel(num);
-    else
-        var = num;
-    end
+    var = length(val);
     
     nVar = preVar + var;
     target = (preVar + 1) : nVar;
@@ -94,28 +50,16 @@ for i=2:dim1
     condCell{row,2} = target;
     
     %% Min/Max Values
-    if any(minCol) && any(maxCol)
-        min = variCons{i,minCol};
-        max = variCons{i,maxCol};
+    if sum(valCol) > 1
         
-        if ~isnumeric(min)
-            min = NaN;
-        end
-        
-        if ~isnumeric(max)
-            max = NaN;
-        end
-        
-        min = repmat(min,1,var);
-        max = repmat(max,1,var);
+        min = variCons{i,valColArray(1)};
+        max = variCons{i,valColArray(2)};
         
         var1 = [var1, min];
         var2 = [var2, max];
-        
     else % varMin covers as value output
         
-        var1 = [var1, num];
-        
+        var1 = [var1, val];
     end
     
     %% Condition
@@ -190,19 +134,22 @@ for i=2:dim1
     
     %% Transformation
     if any(transCol)
+        
         trans = variCons{i,transCol};
-        if trans == "~"
-            transFun = [];
-        else
+        
+        if trans ~= "~"
+            
             transFun = trans;
+            condCell{row,6} = transFun;
         end
-        
-        condCell{row,6} = transFun;
-        
     end
     
     preVar = nVar;
     
+end
+
+if numel(varArray) ~= numel(var1)
+    error("Number of variables does not match corresponding variable names")
 end
 
 end

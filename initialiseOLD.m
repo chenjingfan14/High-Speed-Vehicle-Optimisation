@@ -19,7 +19,6 @@ aft = options.Aft;
 fore = options.Fore;
 nose = options.Nose;
 control = options.Control;
-n = options.WingPartitions;
 
 parallel = options.Parallel;
 Bezier = options.Bezier;
@@ -46,13 +45,13 @@ PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
 
 %% Part Definitions
 variCons = {...
-    "Variables",            "VarMin",   "VarMax",   "Conditions"                "Transformations"};
+    "Variables",            "VarMin",   "VarMax",   "Num Of",       "Conditions"                "Transformations"};
 
 %% 
 
 if wing
     
-    [wingDefs,foilData] = define_wing(options);
+    [wingDefs,foilData,n] = define_wing(Bezier);
     variCons = [variCons; wingDefs];
 else
     
@@ -71,17 +70,17 @@ if control
     variCons = [variCons; controlDefs];
 end
 
+% Streamlines above cell to indices instead of names
+% Total number of variables
+[cond,varArray,varMin,varMax,nVar] = translateOpt(variCons);
+
 %%
 
 % If there is a baseline configuration to be bettered, create here and
 % provide baseline parameters/characteristics
 if baseline
-    
-    options.base = baselinefun(variCons,flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer);
+    options.base = baselinefun(flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer);
 end
 
-variCons = standardvariables(variCons,options);
-
-% Streamlines above cell to indices instead of names
-% Total number of variables
-[cond,varArray,varMin,varMax,nVar] = translateOpt(variCons);
+standard = isnan(varMin)';
+[varMin,varMax] = standardvariables(standard,n,options,varMin,varMax,nVar,varArray);

@@ -1,4 +1,4 @@
-function [Base] = baselinefun(flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer)
+function [Base] = baselinefun(variCons,flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer)
 %% Baseline configuration to be improved upon (currently X-34)
 
 % X-34 build uses pre-defined aerofoil sections so set Bezier to false
@@ -15,74 +15,45 @@ isDirect = true;
 % No conditions required. However if variables are being input directly
 % (ie. not being transformed same as initialisation variCons) then inverse
 % transforms must be done here
+
+wing = options.Wing;
+aft = options.Aft;
+fore = options.Fore;
+nose = options.Nose;
+control = options.Control;
+
 Definition = {...
     "Variables",    "Values"};
+
+if wing
     
-wingDefs = {...
-    "Dihedral",     4;
-    "Chord",       [13.85, 4.387, 1.5241];
-    "LESweep",     [80, 45];
-    "Semispan",    [0.744+0.88, 2.62686];           
-    "Section",     ["FSPLStrake", "FSPLND", "FSPLND"];
-    "xOffset",     -3.5;
-    "zOffset",     -0.74};
-
-aftDefs = {...
-    "UpperLength",  0;
-    "yUpperRad",    0.88;
-    "yBotRatio",    0.1;
-    "zUpperRad",    0.88;
-    "SideLength",   0.759;
-    "zLowerRad",    0.05;
-    "AftLength",    11.8956};
-
-foreDefs = {...
-    "ForeLength",   4.4238};
-
-noseDefs = {...
-    "NoseRad",      0.155;
-    "NoseLength",   0.1115;
-    "zNoseOffset", -0.6};
-
-controlDefs = {...
-    "ControlSpan", [0.4,0.7];
-    "ControlChord", 0.7};
-
-Wing = options.Wing;
-Aft = options.Aft;
-Fore = options.Fore;
-Nose = options.Nose;
-Control = options.Control;
-
-if Wing
+    wingDefs = baseline_wing();
     Definition = [Definition; wingDefs];
 end
 
-if Aft
-    Definition = [Definition; aftDefs];
+if any([aft,fore,nose])
+    
+    baseline_body();
+    Definition = [Definition; bodyDefs];
 end
 
-if Fore
-    Definition = [Definition; foreDefs];
-end
-
-if Nose
-    Definition = [Definition; noseDefs];
-end
-
-if Control
+if control
+    
+    controlDefs = baseline_control();
     Definition = [Definition; controlDefs]; 
 end
 
-
 [foilData,~] = getaerofoilsecdata();
+
+if isDirect
+    
+    Definition = [Definition, variCons(:,end)];
+end
 
 [cond,varArray,baseVar] = translateOpt(Definition);
 
 sectionPos = baseVar(:,any(varArray == ["Section","Bezier"],2));
-sections = foilData(sectionPos,2);
-
-% [wingDim,aftbodyDim,forebodyDim,noseDim,controlDim] = findparts(partArrays);
+sections = foilData(sectionPos);
 
 [baseProperties,~,parameters] = particlecreator(baseVar,baseVar,varArray,sections,options);
 % parameters.Aref = 33.213;
@@ -91,17 +62,27 @@ sections = foilData(sectionPos,2);
 
 % Used to save direct inputs for postprocess
 if isDirect
-    configInputs = baseVar;
+    baseVar = hardtransform(baseVar,cond,varArray,"inverse");
+    
+    % Inverse transform means that configuration is no longer direct
+    % (necessary to state this for plotting)
+    isDirect = false;
 end
 
-% Reverse transform into ratios etc that will be used in simulation
-baseVar = hardtransform(configInputs,cond,varArray);
-
+Base.Definition = cond;
 Base.VarArray = varArray;
 Base.Variables = baseVar;
 Base.nVar = length(baseVar);
-Base.Bezier = options.Bezier;
-Base.nPartitions = n;
+Base.Direct = isDirect;
+
+if wing
+    
+    Base.Bezier = options.Bezier;
+    Base.nPartitions = length(parameters.Semispan);
+end
+
+%% For postprocessor
+configInputs = baseVar;
 
 % Save basline so that it can be loaded into postprocess
 save('Baseline')

@@ -1,6 +1,8 @@
-function [transformedPos] = hardtransform(initialPos,cond,varArray)
-%% Transformation from particle properties to physical
+function [transformedPos] = hardtransform(initialPos,cond,varArray,direction)
+%% Transformation from particle properties to physical or reverse
 % eg. physicalPos(wingroot) = parPos(wingroot)*aftfuselagelength
+% Direction can be set to "inverse" to reverse process
+% Linear multiplications/division assumed (ratios)
 
 [dim,~] = size(cond);
 
@@ -38,12 +40,22 @@ for i = 1:dim
         dimensionaliser = NoseRad;
     end
     
-    if contains(equation,"/")
-        transformedPos(:,array) = target./dimensionaliser;
-    elseif contains(equation,"*") 
-        transformedPos(:,array) = target.*dimensionaliser;
+    if exist('direction','var') && direction == "inverse"
+        
+        if contains(equation,"/")
+            transformedPos(:,array) = target.*dimensionaliser;
+        elseif contains(equation,"*")
+            transformedPos(:,array) = target./dimensionaliser;
+        end
+        
+    else
+        
+        if contains(equation,"/")
+            transformedPos(:,array) = target./dimensionaliser;
+        elseif contains(equation,"*")
+            transformedPos(:,array) = target.*dimensionaliser;
+        end
     end
-    
 end
 
 end

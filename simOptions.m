@@ -1,11 +1,18 @@
 function options = simOptions(nProc)
-%% Include what in configurations
-Wing = true; Aft = true; Fore = true; Nose = true;
+%% Include and Optimise what
 
-options.Wing = Wing;
-options.Aft = Aft;
-options.Fore = Fore;
-options.Nose = Nose;
+wing = true;
+aft = true;
+fore = true;
+nose = true;
+control = false;
+
+wingPartitions = 3;
+
+% Use Bezier splines for 2D aerofoil definition, else use preloaded data
+% files
+Bezier = true;
+BezierControlPoints = 7;
 
 % If number of processors has been entered and if that value is > 1, create
 % parallel loop
@@ -22,9 +29,19 @@ else % Running on one processor
     options.Parallel = false;
 end
 
-% Use Bezier splines for 2D aerofoil definition, else use preloaded data
-% files
-options.Bezier = true;
+options.Wing = wing;
+options.Aft = aft;
+options.Fore = fore;
+options.Nose = nose;
+options.Bezier = Bezier;
+
+if wing
+    options.WingPartitions = wingPartitions;
+end
+
+if Bezier
+    options.BezierControlPoints = BezierControlPoints;
+end
 
 % Use hard coded transforms (required for cluster), else uses versatile
 % (sym engine required) transform function
@@ -37,7 +54,7 @@ options.Shielding = false;
 options.Viscous = true;
 
 % Include control surfaces as design variables
-options.Control = false;
+options.Control = control;
 
 % Initial baseline configuration to be analysed and used as reference
 options.Baseline = true;

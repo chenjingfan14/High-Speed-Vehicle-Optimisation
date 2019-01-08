@@ -1,7 +1,7 @@
 %% Start Particle Swarm Optimiser
 
 % Initialise problem specific parameters, adds them to overall workspace
-initialise
+initialise();
 
 tic
 
