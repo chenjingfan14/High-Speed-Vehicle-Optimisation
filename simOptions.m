@@ -12,7 +12,7 @@ wingPartitions = 3;
 % Use Bezier splines for 2D aerofoil definition, else use preloaded data
 % files
 Bezier = true;
-BezierControlPoints = 7;
+BezierControlPoints = 6;
 
 % If number of processors has been entered and if that value is > 1, create
 % parallel loop

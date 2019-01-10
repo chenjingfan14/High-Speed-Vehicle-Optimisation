@@ -5,15 +5,15 @@ bodyDefs = [];
 
 if aft
     
-%       "Variables",            "VarMin",           "VarMax",   "Conditions"                "Transformations"
     aftDefs = {...
-        "UpperLength",          NaN,                NaN,        "~",                        "~";
-        "yUpperRad",            NaN,                NaN,        "~",                        "~";
-        "yBotRatio",            NaN,                NaN,        "~",                        "~";
-        "zUpperRad",            NaN,                NaN,        "~",                        "~";
-        "SideLength",           NaN,                NaN,        "~",                        "~";
-        "zLowerRad",            NaN,                NaN,        "~",                        "~";
-        "AftLength",            NaN,                NaN,        "~",                        "~"};
+        "Variables",        "VarMin",   "VarMax",   "Conditions",	"Transformations",  "Optimise/Hold"
+        "UpperLength",      NaN,        NaN,        "~",            "~",                "Hold";
+        "yUpperRad",        NaN,        NaN,        "~",            "~",                "Hold";
+        "yBotRatio",        NaN,        NaN,        "~",            "~",                "Hold";
+        "zUpperRad",        NaN,        NaN,        "~",            "~",                "Hold";
+        "SideLength",       NaN,        NaN,        "~",            "~",                "Hold";
+        "zLowerRad",        NaN,        NaN,        "~",            "~",                "Hold";
+        "AftLength",        NaN,        NaN,        "~",            "~",                "Hold"};
     
     bodyDefs = [bodyDefs; aftDefs];
     
@@ -21,20 +21,20 @@ end
 
 if fore
     
-%       "Variables",            "VarMin",           "VarMax",   "Conditions"                "Transformations"
     foreDefs = {...
-        "ForeLength",           NaN,                NaN,        "~",                        "~"};
+        "ForeLength",       NaN,        NaN,        "~",            "~",                "Hold"};
     
     bodyDefs = [bodyDefs; foreDefs];
 end
 
 if nose
     
-%       "Variables",            "VarMin",           "VarMax",   "Conditions"                "Transformations"
     noseDefs = {...
-        "NoseRad",              NaN,                NaN,        "~",                        "~";
-        "NoseLength",           NaN,                NaN,        "~",                        ".*NoseRad";
-        "zNoseOffset",          NaN,                NaN,        "~",                        ".*AftHalfHeight"};
+        "NoseRad",          NaN,        NaN,        "~",            "~",                "Hold";
+        "NoseLength",       NaN,        NaN,        "~",            ".*NoseRad",        "Hold";
+        "zNoseOffset",      NaN,        NaN,        "~",            ".*AftHalfHeight",  "Hold"};
     
     bodyDefs = [bodyDefs; noseDefs];
 end
+
+bodyDefs = optorhold(bodyDefs);

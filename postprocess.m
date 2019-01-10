@@ -15,6 +15,7 @@ Bezier = options.Bezier;
 %% Important Parameters
 % Define what to plot, can be in single string containing various options,
 % or string array
+% Options: CN CA Cm Cl Cd Cl_Cd L D M Aerofoils
 what = "Aerofoils";
 
 % How many configurations & corresponding analysis graphs to plot at once
@@ -23,31 +24,31 @@ atOnce = 5;
 %%
 [nPop,~] = size(configInputs);
 
-% Impose conditions on particles
-[partArrays,sectionArray] = partIndexing(cond,varArray);
-
-[~,configVar] = size(configInputs);
-[~,nVar] = size(varMin);
-
-if configVar == nVar
-    outwith = configInputs < varMin | configInputs > varMax;
-else
-    outwith = true;
-end
-
-if (exist('isDirect','var') && isDirect) || any(outwith(:))
+% Checks if given parameters are physcial properties or still to be
+% determined from conditions/transformations
+if (exist('isDirect','var') && isDirect)
+    
     disp('Variables assumed to be actual configuration measurements')
     physicalPos = configInputs;
+    
 else
+    % Impose conditions on particles
     [~,physicalPos] = contrans(configInputs,nPop,cond,varArray,options);
 end
 
-sectionPos = physicalPos(:,sectionArray);
-
-% Assign 2D section matrices to particles
 if Bezier
+    % Create 2D aerofoil section Bezier curves from control points
+    sectionArray = varArray == "Bezier";
+    sectionPos = physicalPos(:,sectionArray);
+    
     sections = Bezier3(sectionPos,n,foilData,nPop);
 else
+    % Assign 2D section matrices to particles. Foils variable = section indices
+    sectionArray = varArray == "Section";
+    sectionPos = physicalPos(:,sectionArray);
+    
+    zero = sectionPos == 0;
+    sectionPos(zero) = 1;
     sections = foilData(sectionPos);
 end
 
@@ -58,7 +59,7 @@ for i = nPop:-1:1
     configSections = sections(i,:);
     
     % Create configuration
-    [configProperties,configInputs(i,:),configParameters] = particlecreator(configInputs(i,:),physicalPos(i,:),partArrays,configSections);
+    [configProperties,configInputs(i,:),configParameters] = particlecreator(configInputs(i,:),physicalPos(i,:),varArray,configSections,options);
     % Analyse configuration and plot
     [~,configResults] = aeroprediction(configProperties,flow,configParameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
     

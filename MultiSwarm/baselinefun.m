@@ -45,15 +45,30 @@ end
 
 [foilData,~] = getaerofoilsecdata();
 
+% If baseline is a direct definition (ie. actual physical values not
+% needing to be transformed or conditioned) then find transformations in
+% optimisation definition and invert variables so that they are of the same
+% format as optimisation values
 if isDirect
     
-    Definition = [Definition, variCons(:,end)];
+    [~,col] = size(variCons);
+    
+    % Grab titles
+    for i=col:-1:1
+
+        Headers(i) = variCons{1,i};
+    end
+
+    transCol = Headers == "Transformations";
+    Definition = [Definition, variCons(:,transCol)];
 end
 
 [cond,varArray,baseVar] = translateOpt(Definition);
 
-sectionPos = baseVar(:,any(varArray == ["Section","Bezier"],2));
+sectionPos = baseVar(any(varArray == ["Section","Bezier"],2));
 sections = foilData(sectionPos);
+
+baseVar = baseVar';
 
 [baseProperties,~,parameters] = particlecreator(baseVar,baseVar,varArray,sections,options);
 % parameters.Aref = 33.213;

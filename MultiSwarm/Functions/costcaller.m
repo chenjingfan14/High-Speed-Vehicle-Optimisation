@@ -6,29 +6,30 @@ parFit = zeros([nPop, nFun]);
 % Impose conditions on particles
 Bezier = options.Bezier;
 
-% [partArrays,sectionArray] = partIndexing(cond,varArray);
-
 [parPos,physicalPos] = contrans(parPos,nPop,cond,varArray,options);
-
-
-sectionPos = physicalPos(:,sectionArray);
 
 if Bezier
     % Create 2D aerofoil section Bezier curves from control points
+    sectionArray = varArray == "Bezier";
+    sectionPos = physicalPos(:,sectionArray);
+    
     sections = Bezier3(sectionPos,n,foilData,nPop);
 else
     % Assign 2D section matrices to particles. Foils variable = section indices
+    sectionArray = varArray == "Section";
+    sectionPos = physicalPos(:,sectionArray);
+    
     zero = sectionPos == 0;
     sectionPos(zero) = 1;
     sections = foilData(sectionPos);
 end
 
-if options.parallel
+if options.Parallel
     % options.parallel
     parfor i=1:nPop
         
         % Attempt to create configuration
-        [parProperties,parPos(i,:),parameters] = particlecreator(parPos(i,:),physicalPos(i,:),partArrays,sections(i,:));
+        [parProperties,parPos(i,:),parameters] = particlecreator(parPos(i,:),physicalPos(i,:),varArray,sections(i,:),options);
         
         % End use cost function to calculate fitness
         parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
@@ -38,7 +39,7 @@ else % Same as above but for single-core processing
     for i=1:nPop
         
         % Attempt to create configuration
-        [parProperties,parPos(i,:),parameters] = particlecreator(parPos(i,:),physicalPos(i,:),partArrays,sections(i,:));
+        [parProperties,parPos(i,:),parameters] = particlecreator(parPos(i,:),physicalPos(i,:),varArray,sections(i,:),options);
         
         % End use cost function to calculate fitness
         parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);

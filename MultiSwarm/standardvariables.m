@@ -1,10 +1,43 @@
 function variCons = standardvariables(variCons,options)
 %% Standardised variables to be held constant during optimisation
 
-n = options.WingPartitions;
+Bezier = options.Bezier;
+wing = options.Wing;
+aft = options.Aft;
+fore = options.Fore;
+nose = options.Nose;
+control = options.Control;
+baseline = options.Baseline;
 
-% X-34 Body (reverse-transformed, ie. if transformations in
-% conditioning change these also need to)
+%% 2D Aerofoil Section Defintion
+
+% Define sections as Bezier curves
+if Bezier
+    
+    BezierControlPoints = options.BezierControlPoints;
+    
+    % Control point min/max coordinates
+    standSec = [1,  0.9,    0.7,    0.5,    0.3,    0,      0;
+        1,  0.9,    0.7,    0.5,    0.3,    0,      0;
+        0,  0.035,  0.04,   0.07,   0.04,   0.05,   0;
+        0, -0.015, -0.02,  -0.05,  -0.02,  -0.05,   0]';
+    
+    [standControlPoints,~] = size(standSec(2:end,:));
+    
+    if standControlPoints ~=  BezierControlPoints
+        
+        error("Number of Bezier control points not consistent with options definition")
+    end
+    
+    %     standSec = repmat(standSec,1,1,n+1);
+    sectionStr = "Bezier";
+else
+    
+    % Define sections be pre-loaded data files
+    standSec = 1;
+    sectionStr = "Section";
+end
+
 Definition = {...
     "Variables",        "Standard Value"};
 
@@ -13,7 +46,7 @@ wingDefs = {...
     "Chord",            0.8;
     "LESweep",          40;
     "Semispan",         2;
-    "SectionDefinition",[];
+    sectionStr,         standSec;
     "xOffset",          0;
     "zOffset",          0};
 
@@ -48,35 +81,9 @@ controlDefs = {...
     "ControlSpan",     [0.4,0.7];
     "ControlChord",     0.7};
 
-Bezier = options.Bezier;
-wing = options.Wing;
-aft = options.Aft;
-fore = options.Fore;
-nose = options.Nose;
-control = options.Control;
-baseline = options.Baseline;
-
 [rows,~] = size(variCons);
 
 if wing
-    
-    if Bezier
-        str = "Bezier";
-        vals = [1, 0.9, 0.7, 0.5, 0.3, 0,  0, 1, 0.9, 0.7, 0.5, 0.3, 0, 0,  0, 0.035, 0.04, 0.07, 0.04, 0.05, 0,  0, -0.015, -0.02, -0.05, -0.02, -0.05, 0];
-    else
-        str = "Section";
-        vals = 1;
-    end
-    
-    % Find which set of variables correspond to 2D aerofoil sections
-    for i=size(wingDefs,1):-1:1
-        
-        secDef(i) = wingDefs{i,1} == "SectionDefinition";
-    end
-    
-    % And Insert definition
-    wingDefs(secDef,:) = {str,vals};
-    
     Definition = [Definition; wingDefs];
 end
 
@@ -98,19 +105,9 @@ end
 
 if baseline
     
-    baseConfig = options.base;
-    baseDefinition = baseConfig.Definition;
+    baseConfig = options.Base;
     baseVariables = baseConfig.Variables;
     baseVarArray = baseConfig.VarArray;
-    basePartitions = baseConfig.nPartitions;
-    baseSections = basePartitions + 1;
-    baseBezier = baseConfig.Bezier;
-    baseIsDirect = baseConfig.Direct;
-    
-    partitions = (1:n)';
-    sections = (1:n+1)';
-    
-    [chordPrint,sweepPrint,spanPrint,sectionPrint] = deal(false);
     
     name = strings(rows,1);
     
@@ -118,199 +115,125 @@ if baseline
         
         name(i) = variCons{i,1};
         
-        min = variCons{i,2};
-        max = variCons{i,3};
+        varMin = variCons{i,2};
+        varMax = variCons{i,3};
         
-        minCon = isnan(min);
-        maxCon = isnan(max);
+        minCon = isnan(varMin);
+        maxCon = isnan(varMax);
         
-        dim = 1:length(minCon);
+        dims = size(varMin);
+        elements = 1:numel(varMin);
         
-        minArray = dim(minCon);
-        maxArray = dim(maxCon);
+        minArray = elements(minCon);
+        maxArray = elements(maxCon);
         
         if any(minCon | maxCon)
             
             if name(i) ~= name(i-1)
-                ID = 1;
+                
+                print = false;
             end
             
             stand = Definition{i,2};
             base = baseVariables(baseVarArray == name(i));
             
-            for j = 1:length(min)
+            baseDims = size(base);
+            
+            %% VarMin Loop
+            use = min(dims(end),sum(minCon(:)));
+            minArray = reshape(minArray,[],use);
+            
+            for j = 1:use
+                
+                ID = minArray(:,j);
                 
                 % If yes, sections wish to be set as stardard. Must check that
                 % optimisation variables and base variables are the same for the wing
                 % (in terms of nPartitions) otherwise will not work
-                if name(i) == "Chord"
+                if j <= baseDims(end)
                     
-                    if sections(ID) <= baseSections
-                        
-                        min(j) = base(ID);
-                        max(j) = base(ID);
-                        
-                    else
-                        if ~chordPrint
-                            
-                            fprintf('Base chord used outboard until section %i \n', baseSections)
-                            chordPrint = true;
-                        end
-                        
-                        if length(stand) == 1
-                            
-                            min(minArray) = stand;
-                            max(maxArray) = stand;
-                        else
-                            
-                            min(minArray) = stand(minArray);
-                            max(maxArray) = stand(maxArray);
-                        end
-                        
-                        continue
-                    end
-                    
-                    %% REPEAT ABOVE
-                    
-                elseif name(i) == "LESweep"
-                    
-                    if partitions(ID) <= basePartitions
-                        
-                        min(i) = base(ID);
-                        max(i) = base(ID);
-                        
-                    else
-                        if ~sweepPrint
-                            
-                            fprintf('Base sweep used outboard until partition %i \n', basePartitions)
-                            sweepPrint = true;
-                        end
-                        
-                        if length(stand) == 1
-                            
-                            min(minArray) = stand;
-                            max(maxArray) = stand;
-                        else
-                            
-                            min(minArray) = stand(minArray);
-                            max(maxArray) = stand(maxArray);
-                        end
-                        
-                        continue
-                    end
-                    
-                elseif name(i) == "Semispan"
-                    
-                    if partitions(ID) <= basePartitions
-                        
-                        min(i) = base(ID);
-                        max(i) = base(ID);
-                    else
-                        
-                        if ~spanPrint
-                            
-                            fprintf('Base semispan used outboard until partition %i \n', basePartitions)
-                            spanPrint = true;
-                        end
-                        
-                        if length(stand) == 1
-                            
-                            min(minArray) = stand;
-                            max(maxArray) = stand;
-                        else
-                            
-                            min(minArray) = stand(minArray);
-                            max(maxArray) = stand(maxArray);
-                        end
-                        
-                        continue
-                    end
-                    
-                    % Same as before although must also be defined same as optimisation
-                    % variables in terms of sections or Bezier curves
-                elseif any(name(i) == ["Section","Bezier"],2)
-                    
-                    ID = i - sectionArray == 0;
-                    
-                    if Bezier == baseBezier
-                        
-                        if sections(ID) <= baseSections
-                            
-                            baseSec = baseVariables(any(baseVarArray == ["Section","Bezier"],2));
-                            baseSec = reshape(baseSec,n,[]);
-                            
-                            varMin = [varMin, baseSec(:,ID)];
-                            varMax = [varMax, baseSec(:,ID)];
-                        else
-                            
-                            if ~sectionPrint
-                                
-                                fprintf('Base sections used outboard until section %i \n', baseSections)
-                                sectionPrint = true;
-                            end
-                            
-                            varMin = [varMin, stand];
-                            varMax = [varMax, stand];
-                            
-                        end
-                        
-                    else
-                        
-                        if ~sectionPrint
-                            
-                            fprintf('Standard sections cannot be set by base configuration due to \ndiffering definitions. \nUsing back-up standard variables instead \n')
-                            sectionPrint = true;
-                        end
-                        
-                        varMin = [varMin, stand];
-                        varMax = [varMax, stand];
-                        
-                    end
-                    
+                    varMin(ID) = base(ID);
                 else
                     
-                    min(j) = base(ID);
-                    max(j) = base(ID);
-
+                    if ~print
+                        
+                        if j == 1
+                            
+                            fprintf('Standard %s used as base definition not applicable \n', name(i));
+                        else
+                            
+                            fprintf('Base %s used outboard until partition %i (or section %i) \n', name(i), j-1, j)
+                        end
+                        
+                        print = true;
+                    end
+                    
+                    varMin(ID) = stand;
                 end
-                
-                minArray(1) = [];
-                maxArray(1) = [];
-            
-                ID = ID + 1;
-                
             end
             
-            variCons{i,2} = min;
-            variCons{i,3} = max;
-
+            variCons{i,2} = varMin;
+            
+            %% VarMax Loop
+            use = min(dims(end),sum(maxCon(:)));
+            maxArray = reshape(maxArray,[],use);
+            
+            for j = 1:use
+                
+                ID = maxArray(:,j);
+                
+                % If yes, sections wish to be set as stardard. Must check that
+                % optimisation variables and base variables are the same for the wing
+                % (in terms of nPartitions) otherwise will not work
+                if j <= baseDims(end)
+                    
+                    varMax(ID) = base(ID);
+                else
+                    
+                    if ~print
+                        
+                        if j == 1
+                            
+                            fprintf('Standard %s used as base definition not applicable \n', name(i));
+                        else
+                            
+                            fprintf('Base %s used outboard until partition %i (or section %i) \n', name(i), j-1, j)
+                        end
+                        
+                        print = true;
+                    end
+                    
+                    varMax(ID) = stand;
+                end
+            end
+            
+            variCons{i,3} = varMax;
         end
     end
-    
 else
     
     % If no baseline specific, replace all desired variables with standard
     % ones specified above
     for i = 2:rows
         
-        min = variCons{i,2};
-        max = variCons{i,3};
+        varMin = variCons{i,2};
+        varMax = variCons{i,3};
         
         stand = Definition{i,2};
         
-        minCon = isnan(min);
-        maxCon = isnan(max);
+        minCon = isnan(varMin);
+        maxCon = isnan(varMax);
         
         if length(stand) == 1
-            min(minCon) = stand;
-            max(maxCon) = stand;
+            varMin(minCon) = stand;
+            varMax(maxCon) = stand;
         else
-            min(minCon) = stand(minCon);
-            max(maxCon) = stand(maxCon);
+            varMin(minCon) = stand(minCon);
+            varMax(maxCon) = stand(maxCon);
         end
         
-        variCons{i,2} = min;
-        variCons{i,3} = max;
+        variCons{i,2} = varMin;
+        variCons{i,3} = varMax;
     end
     
 end

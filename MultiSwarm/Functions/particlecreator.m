@@ -32,7 +32,8 @@ if Aft
     % Create aft body portion of body
     aftbody = arbitraryfuse([aftbodyGeom,aftBodyLength],noseForeLength);
     
-    parameters.NoseL = noseForeLength;
+    parameters.ForeL = noseForeLength;
+    parameters.AftL = aftBodyLength;
     parameters.BodyL = noseForeLength + aftBodyLength;
     parameters.BodyW = aftbody.Width;
     parameters.BodyH = aftbody.Height;
@@ -117,6 +118,12 @@ for i=wingDim:-1:1
         maxFirstSemispan = max(aftbody.Height,aftbody.Width)*2;
         
         %% If unsuccessful, while loop to fix until it is successful
+        % Reason 1: Wing fore of body (increase x offset)
+        % Reason 2: Wing aft of body (decrease x offset)
+        % Reason 3: Wing below body (increase z offset)
+        % Reason 4: Wing above body (decrease z offset)
+        % Reason 5: First wing partition within body (increase semispan)
+        
         while ~success
             
             % Reason config failed to create
@@ -127,8 +134,19 @@ for i=wingDim:-1:1
             
             % If history of failure reasons is filled, and loop is bouncing
             % between reasons, and loop hasn't reduced fixFactor recently: 
-            % reduce fixFactor & reset stayOut
+            % reduce fixFactor & reset stayOut EDIT: Trying to reduce chord
+            % instead
             if attempt > nHist && bouncing && stayOut >= 0
+                
+%                 chord(1) = chord(1) - 0.1*chord(1);
+%                 parChord(1) = parChord(1) - 0.1*parChord(1);
+%                 
+%                 if Control
+%                     liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
+%                 else
+%                     liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
+%                 end
+                
                 fixFactor = fixFactor/2;
                 stayOut = -nHist;
             end
@@ -136,13 +154,16 @@ for i=wingDim:-1:1
             % Sometimes straight unswept untapered wings cause issues
             % when merging, so ensure first partition sweep is non-zero
             if sweep(1) < 1
+                
                 sweep(1) = 1;
             end
             
             % Chord may get too low in "last resort" method, if so make all
-            % chord values equal to half the entire body length
+            % chord values equal to half the aftbody length
             if chord(1) < 1
-                chord(:) = parameters.BodyL/2;
+                
+                chord(:) = parameters.AftL/2;
+                parChord(:) = 0.5;
             end
             
             if isempty(reason)
@@ -194,10 +215,10 @@ for i=wingDim:-1:1
                         semispan(1) = semispan(1) + 0.1*semispan(1);
                         parSemispan(1) = parSemispan(1) + 0.1*parSemispan(1);
                             
-                        if isempty(controlDim)
-                            liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
-                        else
+                        if Control
                             liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
+                        else
+                            liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
                         end
                 end
                 

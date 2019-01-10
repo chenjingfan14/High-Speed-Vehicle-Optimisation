@@ -46,7 +46,7 @@ PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
 
 %% Part Definitions
 variCons = {...
-    "Variables",            "VarMin",   "VarMax",   "Conditions"                "Transformations"};
+    "Variables", "VarMin", "VarMax", "Conditions", "Transformations", "Optimise/Hold"};
 
 %% 
 
@@ -77,7 +77,7 @@ end
 % provide baseline parameters/characteristics
 if baseline
     
-    options.base = baselinefun(variCons,flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer);
+    options.Base = baselinefun(variCons,flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer);
 end
 
 variCons = standardvariables(variCons,options);

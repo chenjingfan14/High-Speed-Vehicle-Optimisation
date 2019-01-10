@@ -16,8 +16,8 @@ set3 = set2 + setSize; % Non-uniform mutation
 
 % Replicating min/max bounds into matrix with number of rows = population
 % size
-varMinMat = repmat(varMin,nPop,1);
-varMaxMat = repmat(varMax,nPop,1);
+varMinMat = repmat(varMin',nPop,1);
+varMaxMat = repmat(varMax',nPop,1);
 
 varSize = [nPop nVar];
 
@@ -146,6 +146,10 @@ for it = 2:maxIt+1
     
     parPos = parPos + parVel;
     
+    % Mutation functions
+    parPos(set2,:) = unimutation(parPos(set2,:),setSize,nVar,varMinMat,varMaxMat,mutProb);
+    parPos(set3,:) = nonunimutation(parPos(set3,:),setSize,nVar,varMinMat(set3,:),varMaxMat(set3,:),mutProb,it-1,maxIt);
+    
     % Ensure new particle position is within boundaries
     con1 = parPos > varMaxMat;
     con2 = parPos < varMinMat;
@@ -154,10 +158,6 @@ for it = 2:maxIt+1
     parVel(con1 | con2) = 0;
     parPos(con1) = varMaxMat(con1);
     parPos(con2) = varMinMat(con2);
-    
-    % Mutation functions
-    parPos(set2,:) = unimutation(parPos(set2,:),setSize,nVar,varMin,varMax,mutProb);
-    parPos(set3,:) = nonunimutation(parPos(set3,:),setSize,nVar,varMinMat(set3,:),varMaxMat(set3,:),mutProb,it-1,maxIt);
     
     %% Only optimisation part dependent on problem
     

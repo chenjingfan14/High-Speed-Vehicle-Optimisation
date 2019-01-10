@@ -395,10 +395,11 @@ copMaxDiffbar = mean(copMaxDiff);
 
 Lbar = mean(L(:));
 Dbar = mean(D(:));
+Clbar = mean(Cl(:));
 Cdbar = mean(Cd(:));
 Mbar = mean(rootMoment(:));
 
-cop = copMaxDiffbar/MAC;
+copBar = copMaxDiffbar/MAC;
 
 results.CN = CN;
 results.CA = CA;
@@ -410,50 +411,14 @@ results.RootMoment = rootMoment;
 results.Lift = L;
 results.Drag = D;
 
-results.RootMomentBar = Mbar;
-results.LiftBar = Lbar;
-results.DragBar = Dbar;
-results.copBar = cop;
+results.Clbar = Clbar;
+results.Cdbar = Cdbar;
+results.Mbar = Mbar;
+results.Lbar = Lbar;
+results.Dbar = Dbar;
+results.copBar = copBar;
 
 %% Translate aerodynamic characteristics to cost function values
 % Usually non-dimensionalised
 
-if any(numFoils)
-
-    % lift = Lbar/wingspan;
-    % moment = Mbar/wingspan;
-    
-    % Constraint section. Apply penalties if desired values are too
-    % high/low
-    
-    if baseline
-        
-        base = options.Base;
-        
-        constrain = [Mbar,cop,Lbar];
-        minVal = [0,0,base.LiftBar];
-        maxVal = [base.RootMomentBar,base.copBar,inf];
-    else
-        constrain = [Mbar,cop];
-        minVal = [0,0];
-        maxVal = [inf,0.5];
-    end
-    
-    penalty = violation(constrain,minVal,maxVal);
-    
-    % Check magnitude of penalty
-%     if any(penalty)
-%         penalty 
-%     end
-    
-    cost = [1/Lbar,Cdbar] + penalty;
-    
-    % If any cost less than zero, particle swarm will see it as optimal,
-    % whereas none of these aerodynamic values should be less than zero
-    infCon = cost < 0;
-    
-    cost(infCon) = inf;
-    
-else
-    cost = [];
-end
+cost = cost_calculation(results,options);

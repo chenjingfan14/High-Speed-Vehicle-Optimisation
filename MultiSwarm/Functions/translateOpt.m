@@ -3,7 +3,6 @@ function [condCell,varArray,var1,var2,nVar] = translateOpt(variCons)
 % Creates cell to be read for conditioning and indexing purposes
 
 [rows,cols] = size(variCons);
-colArray = 1:cols;
 
 preVar = 0;
 
@@ -22,45 +21,81 @@ end
 nameCol = Headers == "Variables";
 valCol = any(Headers == ["VarMin","VarMax","Values"]');
 
-valColArray = colArray(valCol);
-
 % May only exist for optimisation variables (not baseline or standard)
 conCol = Headers == "Conditions";
 transCol = Headers == "Transformations";
 
-for i=2:rows
+for i = 2:rows
     
     row = i - 1;
     
     name = variCons{i,nameCol};
-    val = variCons{i,valCol};
     
-    var = length(val);
+    valCell = variCons(i,valCol);
     
-    nVar = preVar + var;
-    target = (preVar + 1) : nVar;
+    %% Transform indidvidual characteristic values into 1D all encompassing arrays
     
-    if preVar == 0
-        varArray(1,:) = name;
-    else
-        varArray(target,:) = name;
+    % Counter can only equal 1 or 2
+    
+    % If optimisation variCons being translated: 
+    % var1 = varMin, var2 = varMax
+    
+    % If baseline variCons being translated:
+    % var1 = variables, var2 not used
+    for j = 1:numel(valCell)
+        
+        val = valCell{j};
+        dims = size(val);
+        
+        % Need 1D arrays, so transform any higher dimension matrices into
+        % such
+        if numel(dims) == 3 && all(dims > 1) % Turns 3D into 1D
+            
+            val = reshape(val,1,[],dims(3));
+            val = reshape(val,1,[]);
+            
+        elseif numel(dims) == 2 && all(dims > 1) % Turns 2D into 1D
+            
+            val = reshape(val,1,[]);
+        end
+        
+        % Assign names to variables and form min and max arrays
+        if j == 1
+            
+            % Find where current variables lie in complete variable array
+            var = length(val);
+            nVar = preVar + var;
+            target = (preVar + 1) : nVar;
+            
+            % Assign current variables to complete variable array in
+            % correct position
+            if preVar == 0
+                
+                varArray(1,:) = name;
+                var1(1,:) = val;
+            else
+                
+                varArray(target,:) = name;
+                var1(target,:) = val;
+            end
+  
+        elseif j == 2
+            
+            % As above however target has already been calculated, and
+            % varArray has been assigned already. Here only assigning
+            % complete maximum variable array (if applicable)
+            if preVar == 0
+                
+                var2(1,:) = val;
+            else
+                
+                var2(target,:) = val;
+            end
+        end
     end
     
     condCell{row,1} = name;
     condCell{row,2} = target;
-    
-    %% Min/Max Values
-    if sum(valCol) > 1
-        
-        min = variCons{i,valColArray(1)};
-        max = variCons{i,valColArray(2)};
-        
-        var1 = [var1, min];
-        var2 = [var2, max];
-    else % varMin covers as value output
-        
-        var1 = [var1, val];
-    end
     
     %% Condition
     if any(conCol)
@@ -75,26 +110,32 @@ for i=2:rows
                 coni = con(ii);
                 
                 if contains(coni,"<")
+                    
                     condition = ' < ';
                 end
                 if contains(coni,">")
+                    
                     condition = ' > ';
                 end
                 if contains(coni,"==")
+                    
                     condition = ' == ';
                 end
                 if contains(coni,"sum")
+                    
                     constraint = regexp(coni,'[+-]?\d+\.?\d*', 'match');
                     setto = constraint;
                     equation = ['sum(target)' condition char(constraint)];
                     constraint = double(constraint);
                 end
                 if contains(coni,"Previous")
+                    
                     constraint = [NaN, target(1:end-1)];
                     setto = constraint;
                     equation = ['target' condition 'constraint'];
                 end
                 if contains(coni,"Next")
+                    
                     constraint = [target(2:end), NaN];
                     setto = constraint;
                     equation = ['target' condition 'constraint'];
@@ -113,6 +154,7 @@ for i=2:rows
                     constraint = double(constraint);
                 end
                 if contains(coni,"Floor")
+                    
                     equation = 'floor(target)';
                     constraint = NaN;
                     setto = NaN;
