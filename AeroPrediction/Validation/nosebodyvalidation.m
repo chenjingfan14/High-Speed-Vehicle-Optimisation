@@ -7,6 +7,7 @@ which = 1:6;
 % User-defined Angle of Attack. Leave empty ([]) to use experimental data
 % AoAs
 AoA = [];
+% AoA = 0;
 
 % All available Mach number
 % Mach = [1.6,2.3,2.96,4.63]';

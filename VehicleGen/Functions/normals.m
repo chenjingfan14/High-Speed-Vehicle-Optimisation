@@ -70,6 +70,19 @@ for ii=1:length(partStruct)
     con = isnan(unitNorm);
     unitNorm(con) = 0;
     
+    nyz = (ny.^2 + nz.^2).^0.5;
+    halfAngle = atan2(-nx,nyz)*180/pi;
+    
+    flow = nx < 0;
+    
+    del = round(halfAngle,10);
+    
+    con1 = del > 90;
+    con2 = del < -90;
+    del(con1) = 180 - del(con1);
+    del(con2) = -180 - del(con2);
+    del = del*pi/180;
+    
     %% Calculate average deltas across each panel
     
     % Might not be needed if not using Pollock's method for viscous
@@ -91,5 +104,9 @@ for ii=1:length(partStruct)
     partStruct(ii).deltax = deltax;
     partStruct(ii).deltay = deltay;
     partStruct(ii).area = panelarea(x,y,z);
+    partStruct(ii).del = del;
+    partStruct(ii).flow = flow;
     
+end
+
 end
