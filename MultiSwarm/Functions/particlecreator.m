@@ -8,6 +8,7 @@ Aft = options.Aft;
 Fore = options.Fore;
 Nose = options.Nose;
 Control = options.Control;
+Structure = options.Structure;
 
 %% Create body
 % Check if body is part of configuration, if so build it, if not set body
@@ -88,14 +89,19 @@ for i=wingDim:-1:1
     if Control
 %         control = configPos(varArray == ");
         liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
-    else
-%         liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
-
+    
+    end
+    
+    if Structure
+        
         wingbox.Location = [0.1,0.8]';
         wingbox.SparThick = 0.010;
         wingbox.SkinThick = 0.005;
         liftSurface(i) = wingtail_struct(dihedral,semispan,chord,sweep,sections,wingbox);
 %         structures(liftSurface);
+    else
+        
+        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
     end
     
     if Aft

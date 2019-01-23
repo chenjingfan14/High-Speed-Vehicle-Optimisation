@@ -24,8 +24,6 @@ atOnce = 5;
 %%
 [nPop,~] = size(configInputs);
 
-% Checks if given parameters are physcial properties or still to be
-% determined from conditions/transformations
 if (exist('isDirect','var') && isDirect)
     
     disp('Variables assumed to be actual configuration measurements')

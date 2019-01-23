@@ -39,6 +39,7 @@ yzPanels = 25;
 theta = 0:pi/yzPanels:pi;
 
 options = simOptions();
+options.Baseline = false;
 
 complete = false;
 

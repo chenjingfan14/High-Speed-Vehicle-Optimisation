@@ -47,6 +47,9 @@ end
 % (sym engine required) transform function
 options.Hardtransform = true;
 
+% Include structure (not yet complete)
+options.Structure = false;
+
 % Leave false, needs validated
 options.Shielding = false;
 
