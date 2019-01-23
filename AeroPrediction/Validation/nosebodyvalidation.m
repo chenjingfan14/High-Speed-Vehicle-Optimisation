@@ -37,7 +37,7 @@ x = x*l;
 yzPanels = 25;
 theta = 0:pi/yzPanels:pi;
 
-options = simoptions();
+options = simOptions();
 
 complete = false;
 

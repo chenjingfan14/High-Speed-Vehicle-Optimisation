@@ -5,19 +5,35 @@ function partArray = rotate(partArray,rotCentre,alpha)
 % original normals used to find CN, CA, before transferring to CL, CD with
 % angles to planes.
 
-for ii=1:length(partArray)
+dim = numel(partArray);
+
+for i = dim:-1:1
     
-    part = partArray(ii);
+    part = partArray(i);
     
     x = part.x - rotCentre;
     y = part.y;
     z = part.z;
     
-    xrot = (x*cos(alpha) + z*sin(alpha)) + rotCentre;
-    yrot = y;
-    zrot = z*cos(alpha) - x*sin(alpha);
+    cx = part.centre(:,1:3:end) - rotCentre;
+    cy = part.centre(:,2:3:end);
+    cz = part.centre(:,3:3:end);
+    
+    xNorm = part.norm(:,1:3:end);
+    yNorm = part.norm(:,2:3:end);
+    zNorm = part.norm(:,3:3:end);
+    
+    xUnitNorm = part.unitNorm(:,1:3:end);
+    yUnitNorm = part.unitNorm(:,2:3:end);
+    zUnitNorm = part.unitNorm(:,3:3:end);
+    
+    xRot = (x*cos(alpha) + z*sin(alpha)) + rotCentre;
+    yRot = y;
+    zRot = z*cos(alpha) - x*sin(alpha);
     
     [dim1,dim2] = size(x);
+    dim3 = dim1 - 1;
+    dim4 = dim2 - 1;
     
     points = zeros(dim1,dim2*3);
     
@@ -25,57 +41,49 @@ for ii=1:length(partArray)
     Y = X + 1;
     Z = Y + 1;
     
-    points(:,X) = xrot;
+    points(:,X) = xRot;
     points(:,Y) = y;
-    points(:,Z) = zrot;
+    points(:,Z) = zRot;
     
-    at = points(1:end-1,1:end-3);
-    bt = points(2:end,1:end-3);
-    ct = points(2:end,4:end);
-    dt = points(1:end-1,4:end);
+    a = points(1:end-1,1:end-3);
+    b = points(2:end,1:end-3);
+    c = points(2:end,4:end);
+    d = points(1:end-1,4:end);
     
-    centre = (at + bt + ct + dt)/4;
-    [dim3,dim4] = size(centre);
+    cxRot = (cx*cos(alpha) + cz*sin(alpha)) + rotCentre;
+    cyRot = cy;
+    czRot = cz*cos(alpha) - cx*sin(alpha);
     
-    act = ct - at;
-    dbt = bt - dt;
-    
-    X = 1:3:dim4;
+    X = 1:3:dim4*3;
     Y = X + 1;
     Z = Y + 1;
     
-    acx = act(:,X);
-    acy = act(:,Y);
-    acz = act(:,Z);
+    [centre,normRot,unitNormRot] = deal(zeros(dim3,dim4*3));
     
-    dbx = dbt(:,X);
-    dby = dbt(:,Y);
-    dbz = dbt(:,Z);
-     
-    xNorm = dby.*acz - dbz.*acy;
-    yNorm = dbz.*acx - dbx.*acz;
-    zNorm = dbx.*acy - dby.*acx;
+    centre(:,X) = cxRot;
+    centre(:,Y) = cyRot;
+    centre(:,Z) = czRot;
     
-    normnorm = (xNorm.^2 + yNorm.^2 + zNorm.^2).^0.5;
+    xUnitNormRot = (xUnitNorm*cos(alpha) + zUnitNorm*sin(alpha));
+    yUnitNormRot = yUnitNorm;
+    zUnitNormRot = zUnitNorm*cos(alpha) - xUnitNorm*sin(alpha);
     
-    % Zero magnitude normals (ie lines not planes) will give NaN when 
-    % normalising normal components, so set to small value to avoid this
-    con = normnorm == 0;
-    normnorm(con) = 1e-20;
+    xNormRot = (xNorm*cos(alpha) + zNorm*sin(alpha));
+    yNormRot = yNorm;
+    zNormRot = zNorm*cos(alpha) - xNorm*sin(alpha);
     
-    norm = zeros(dim3,dim4);
-    xNorm = xNorm./normnorm;
-    yNorm = yNorm./normnorm;
-    zNorm = zNorm./normnorm;
+    normRot(:,X) = xNormRot;
+    normRot(:,Y) = yNormRot;
+    normRot(:,Z) = zNormRot;
     
-    norm(:,X) = xNorm;
-    norm(:,Y) = yNorm;
-    norm(:,Z) = zNorm;
+    unitNormRot(:,X) = xUnitNormRot;
+    unitNormRot(:,Y) = yUnitNormRot;
+    unitNormRot(:,Z) = zUnitNormRot;
     
-    yzNorm = (yNorm.^2 + zNorm.^2).^0.5;
-    halfAngle = atan2(-xNorm,yzNorm)*180/pi;
+    yzUnitNormRot = (yUnitNormRot.^2 + zUnitNormRot.^2).^0.5;
+    halfAngle = atan2(-xUnitNormRot,yzUnitNormRot)*180/pi;
     
-    flow = xNorm < 0;
+    flow = xUnitNorm < 0;
     
     del = round(halfAngle,10);
     
@@ -85,15 +93,22 @@ for ii=1:length(partArray)
     del(con2) = -180 - del(con2);
     del = del*pi/180;
     
-    partArray(ii).x = xrot;
-    partArray(ii).y = yrot;
-    partArray(ii).z = zrot;
-    partArray(ii).xyz = points;
-    partArray(ii).norm = norm;
-    partArray(ii).centre = centre;
-    partArray(ii).del = del;
-    partArray(ii).flow = flow;
+    partArray(i).x = xRot;
+    partArray(i).y = yRot;
+    partArray(i).z = zRot;
+    partArray(i).xyz = points;
+    partArray(i).a = a;
+    partArray(i).b = b;
+    partArray(i).c = c;
+    partArray(i).d = d;
+    partArray(i).unitNorm = unitNormRot;
+    partArray(i).norm = normRot;
+    partArray(i).centre = centre;
+    partArray(i).del = del;
+    partArray(i).flow = flow;
     
+end
+
 end
 
 %% Then plot using any plotter function

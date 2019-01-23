@@ -22,16 +22,16 @@ for ii=1:row*col
         new(ii).z = z;
     end
     
-    [dim1,dim2] = size(x);
+    [dim1,dim2,dim3] = size(x);
     
-    new(ii).xyz = zeros(dim1,dim2*3);
+    new(ii).xyz = zeros(dim1,dim2*3,dim3);
     
     X = 1:3:dim2*3;
     Y = X + 1;
     Z = Y + 1;
     
-    new(ii).xyz(:,X) = x;
-    new(ii).xyz(:,Y) = y;
-    new(ii).xyz(:,Z) = z;
+    new(ii).xyz(:,X,:) = x;
+    new(ii).xyz(:,Y,:) = y;
+    new(ii).xyz(:,Z,:) = z;
 
 end

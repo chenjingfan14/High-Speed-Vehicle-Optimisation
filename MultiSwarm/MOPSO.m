@@ -67,8 +67,8 @@ nonDomFit(j:end,:) = [];
 nonDomPos(j:end,:) = [];
 
 % Max and min non-dominated particle fitness functions 
-maxf = max(nonDomFit,[],2);
-minf = min(nonDomFit,[],2);
+maxf = max(nonDomFit,[],1);
+minf = min(nonDomFit,[],1);
 
 % Normalise for crowding distance calculation
 nonDomFitNorm = (nonDomFit - minf)./(maxf - minf);

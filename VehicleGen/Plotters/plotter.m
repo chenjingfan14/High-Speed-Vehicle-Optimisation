@@ -109,6 +109,20 @@ for ii=1:nPoints
         
     end
     
+    if any(plotDefs == "unit normals")
+        
+        cx = points.centre(:,X);
+        cy = points.centre(:,Y);
+        cz = points.centre(:,Z);
+        
+        % Dividing by constant factor to provide point just above surface
+        nx = points.unitNorm(:,X)/10;
+        ny = points.unitNorm(:,Y)/10;
+        nz = points.unitNorm(:,Z)/10;
+        plot3(nx + cx, ny + cy, nz + cz,'r*')
+        
+    end
+    
     %%
     if any(plotDefs == "local")
         
@@ -116,9 +130,9 @@ for ii=1:nPoints
         cy = points.centre(:,Y);
         cz = points.centre(:,Z);
         
-        nx = points.norm(:,X);
-        ny = points.norm(:,Y);
-        nz = points.norm(:,Z);
+        nx = points.unitNorm(:,X);
+        ny = points.unitNorm(:,Y);
+        nz = points.unitNorm(:,Z);
         
         unitTx = points.unitTang(:,X);
         unitTy = points.unitTang(:,Y);

@@ -33,7 +33,7 @@ end
 flightStateOrder = ["Alpha","Mach","Altitude","Delta"];
 
 % How each parameter will be plotted graphically
-alphaPlot = ['Alpha (' char(176) ')'];
+alphaPlot = ['Angle of Attack (' char(176) ')'];
 deltaPlot = ['Control Surface Deflection (' char(176) ')'];
 plotOrder = [alphaPlot, "Mach", "Altitude (ft)", deltaPlot];
 

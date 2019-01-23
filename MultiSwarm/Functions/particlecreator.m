@@ -89,7 +89,13 @@ for i=wingDim:-1:1
 %         control = configPos(varArray == ");
         liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
     else
-        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
+%         liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
+
+        wingbox.Location = [0.1,0.8]';
+        wingbox.SparThick = 0.010;
+        wingbox.SkinThick = 0.005;
+        liftSurface(i) = wingtail_struct(dihedral,semispan,chord,sweep,sections,wingbox);
+%         structures(liftSurface);
     end
     
     if Aft

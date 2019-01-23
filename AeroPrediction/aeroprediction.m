@@ -21,8 +21,9 @@ tot = numel(properties); % Total number of parts
 
 % Initialise total aerodynamic coefficients
 initMatrix = zeros(dim);
-
 [Cl,Cd,CN,CA,Cm,L,D,rootMoment,copx] = deal(initMatrix);
+
+wingPressure = cell(dim);
 
 numFoils = 1:sum(~bodyPart); % Total number of aerofoils
 
@@ -348,6 +349,9 @@ for i=1:runs
         alphaPrev = alpha;
         deltaPrev = delta;
         
+        % if partName
+        wingPressure{i} = P;
+        
     end
     
     %% Friction calculation
@@ -386,7 +390,7 @@ for i=1:runs
     L(i) = 0.5*rho*(Uinf^2)*Cl(i)*Aref;
     D(i) = 0.5*rho*(Uinf^2)*Cd(i)*Aref;
 %     plotter(rotPoints)
-    
+
 end
 
 %% Find averages and save all results
@@ -417,6 +421,10 @@ results.Mbar = Mbar;
 results.Lbar = Lbar;
 results.Dbar = Dbar;
 results.copBar = copBar;
+
+%% Structures
+
+% structures(properties(partType == "wing"), points(partType == "wing"));
 
 %% Translate aerodynamic characteristics to cost function values
 % Usually non-dimensionalised
