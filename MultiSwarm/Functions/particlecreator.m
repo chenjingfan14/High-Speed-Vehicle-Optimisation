@@ -224,8 +224,8 @@ for i=wingDim:-1:1
                         
                     case 5 % Increase semispan
                         
-                        semispan(1) = semispan(1) + 0.1*semispan(1);
-                        parSemispan(1) = parSemispan(1) + 0.1*parSemispan(1);
+                        semispan(1) = semispan(1) + 0.5*semispan(1);
+                        parSemispan(1) = parSemispan(1) + 0.5*parSemispan(1);
                             
                         if Control
                             liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
@@ -282,20 +282,23 @@ for i=wingDim:-1:1
         %%
         liftSurface.Offset = [xOffset,zOffset];
         
-        % Feedback particle and physical positions to optimiser
-        parPos(dihedralVar) = parDihedral;
-        parPos(semispanVar) = parSemispan;
-        parPos(chordVar) = parChord;
-        parPos(sweepVar) = parSweep;
-        parPos(xOffsetVar) = parxOffset;
-        parPos(zOffsetVar) = parzOffset;
+        % No need to feedback if successful first time
+        if attempt > 1
+            % Feedback particle and physical positions to optimiser
+            parPos(dihedralVar) = parDihedral;
+            parPos(semispanVar) = parSemispan;
+            parPos(chordVar) = parChord;
+            parPos(sweepVar) = parSweep;
+            parPos(xOffsetVar) = parxOffset;
+            parPos(zOffsetVar) = parzOffset;
 
-        configPos(dihedralVar) = dihedral;
-        configPos(semispanVar) = semispan;
-        configPos(chordVar) = chord;
-        configPos(sweepVar) = sweep;
-        configPos(xOffsetVar) = xOffset;
-        configPos(zOffsetVar) = zOffset;
+            configPos(dihedralVar) = dihedral;
+            configPos(semispanVar) = semispan;
+            configPos(chordVar) = chord;
+            configPos(sweepVar) = sweep;
+            configPos(xOffsetVar) = xOffset;
+            configPos(zOffsetVar) = zOffset;
+        end
         
         % Discretise aerofoils based on target length
         liftSurface = discwing(liftSurface);
@@ -340,7 +343,7 @@ if Fore
         % Find radial aft body points for fore body interpolation
     % size-1 for panel based over
     radial = radialpoints(aftbody.Points);
-    [~,dim_f] = size(radial.y);
+    [dim_f,~] = size(radial);
     
     % Create nose and link together with aftbody by interpolating to
     % create forebody

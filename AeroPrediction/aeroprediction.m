@@ -63,6 +63,7 @@ for i=1:runs
     end
     
     if viscous && (i == 1 || alpha ~= alphaPrev)
+        
         points = velocitydef(points,run);
     end
     
@@ -110,21 +111,12 @@ for i=1:runs
         area = part.area; % Area of each panel
         partdel = rotPart.del;
         
-        [row,col] = size(area);
-        
-        Z = (1:col)*3;
-        Y = Z - 1;
-        X = Y - 1;
-        
         % Panel unit normals x,y and z
         % Unrotated normals used. Correct?
-        unitNx = part.unitNorm(:,X);
-        unitNy = part.unitNorm(:,Y);
-        unitNz = part.unitNorm(:,Z);
+        unitNorm = part.unitNorm;
+        centre = part.centre;
         
-        cx = part.centre(:,X);
-        cy = part.centre(:,Y);
-        cz = part.centre(:,Z);
+        [row,col] = size(area);
         
         %% Characteristics prior to part
         % If current is part of body, give it the previous body part flow
@@ -274,12 +266,14 @@ for i=1:runs
         % Only call if part is first aerofoil (wing should always be set up
         % to be first aerofoil in configuration)
         if any(partProp.Name == ["aerofoil","wing"]) && foilCount == 1
+            
             rootMoment(i) = wingbending(Cp,rotPoints(j),run);
         end
         
         %% Shielding
         
         if shielding && conical
+            
             yzBound = [yzUpBound; yzLoBound];
             [yzUpBound,yzLoBound] = shadowmatrix(cyRot,czRot,yzBound);
         end
@@ -324,26 +318,35 @@ for i=1:runs
         
         %% Calculate total part aerodynamic characteristics
         
-        cx = reshape(cx,[],1);
-        cy = reshape(cy,[],1);
-        cz = reshape(cz,[],1);
-        unitNx = reshape(unitNx,[],1);
-        unitNy = reshape(unitNy,[],1);
-        unitNz = reshape(unitNz,[],1);
+        centre = squeeze(reshape(centre,[],1,3));
+        unitNorm = reshape(unitNorm,[],1,3);
+        
+        nx = unitNorm(:,:,1);
+        ny = unitNorm(:,:,2);
+        nz = unitNorm(:,:,3);
+        
         area = reshape(area,[],1);
         Cp = reshape(Cp,[],1);
         
-        xyzCp(j,:) = sum([cx,cy,cz].*Cp,1);
+        xyzCp(j,:) = sum(centre.*Cp,1);
         sumCp(j) = sum(Cp);
         
         part.CoP = xyzCp(j)/sumCp(j);
         
         % Part aerodynamic characteristics
-        partCl(j) = 2*sum(-((Cp.*area.*unitNx)*sin(xyAngle)) - ((Cp.*area.*unitNy)*sin(xzAngle)) - ((Cp.*area.*unitNz)*sin(yzAngle)))/Aref;
-        partCd(j) = 2*sum(-((Cp.*area.*unitNx)*sin(yzAngle)) + ((Cp.*area.*unitNy)*sin(xzAngle)) - ((Cp.*area.*unitNz)*sin(xyAngle)))/Aref;
-        partCN(j) = 2*sum(-((Cp.*area.*unitNz)))/Aref;
-        partCA(j) = 2*sum(-((Cp.*area.*unitNx)))/Aref;
-        partCm(j) = sum(-(Cp.*area.*unitNx) + (Cp.*area.*unitNz))/Aref;
+        partCl(j) = 2*sum(-((Cp .* area .* nx) * sin(xyAngle)) -...
+            ((Cp .* area .* ny) * sin(xzAngle)) -...
+            ((Cp .* area .* nz) * sin(yzAngle)))/Aref;
+        
+        partCd(j) = 2*sum(-((Cp .* area .* nx) * sin(yzAngle)) +...
+            ((Cp .* area .* ny) * sin(xzAngle)) -...
+            ((Cp .* area .* nz) * sin(xyAngle)))/Aref;
+        
+        partCm(j) = sum(-(Cp .* area .* nx) +...
+            (Cp .* area .* nz))/Aref;
+        
+        partCN(j) = 2*sum(-((Cp .* area .* nz)))/Aref;
+        partCA(j) = 2*sum(-((Cp .* area .* nx)))/Aref;
         
         MinfPrev = Minf;
         alphaPrev = alpha;
@@ -387,8 +390,8 @@ for i=1:runs
     copx(i) = cop(1);
     copCell{i} = cop;
     
-    L(i) = 0.5*rho*(Uinf^2)*Cl(i)*Aref;
-    D(i) = 0.5*rho*(Uinf^2)*Cd(i)*Aref;
+    L(i) = 0.5 * rho * (Uinf^2) * Cl(i) * Aref;
+    D(i) = 0.5 * rho * (Uinf^2) * Cd(i) * Aref;
 %     plotter(rotPoints)
 
 end

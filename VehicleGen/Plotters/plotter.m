@@ -1,4 +1,4 @@
-function plotter(pointStruct,varargin)
+function plotter(struct,varargin)
 
 nCons = length(varargin);
 conArray = 1:nCons;
@@ -33,18 +33,25 @@ zlabel('z (m)')
 
 colour=[0.6 0.6 0.6];
 
-[~,nPoints] = size(pointStruct);
+[~,nPoints] = size(struct);
 
 for ii=1:nPoints
     
-    points = pointStruct(ii);
+    part = struct(ii);
     
-    x = points.x;
-    y = points.y;
-    z = points.z;
+    if iscell(part)
+        
+        points = part{:};
+    else
+        points = part.Points;
+    end
     
-    [~,dim2] = size(x);
-    dim3 = (dim2-1)*3;
+    x = points(:,:,1);
+    y = points(:,:,2);
+    z = points(:,:,3);
+    
+    [~,dim2] = size(points);
+    dim3 = dim2 - 3;
     
     X = 1:3:dim3;
     Y = X + 1;
@@ -53,8 +60,8 @@ for ii=1:nPoints
     %%
     if any(plotDefs == "impact")
         
-        centre = points.centre;
-        xyz = points.xyz;
+        centre = part.centre;
+        xyz = part.xyz;
         [x,y] = size(centre);
         
         for i=1:x
@@ -88,9 +95,9 @@ for ii=1:nPoints
     %%
     if any(plotDefs == "centre")
         
-        cx = points.centre(:,X);
-        cy = points.centre(:,Y);
-        cz = points.centre(:,Z);
+        cx = part.centre(:,:,1);
+        cy = part.centre(:,:,2);
+        cz = part.centre(:,:,3);
         plot3(cx,cy,cz,'k*')
         
     end
@@ -98,27 +105,27 @@ for ii=1:nPoints
     %%
     if any(plotDefs == "normals")
         
-        cx = points.centre(:,X);
-        cy = points.centre(:,Y);
-        cz = points.centre(:,Z);
+        cx = part.centre(:,:,1);
+        cy = part.centre(:,:,2);
+        cz = part.centre(:,:,3);
         
-        nx = points.norm(:,X);
-        ny = points.norm(:,Y);
-        nz = points.norm(:,Z);
+        nx = part.norm(:,:,1);
+        ny = part.norm(:,:,2);
+        nz = part.norm(:,:,3);
         plot3(nx + cx, ny + cy, nz + cz,'r*')
         
     end
     
     if any(plotDefs == "unit normals")
         
-        cx = points.centre(:,X);
-        cy = points.centre(:,Y);
-        cz = points.centre(:,Z);
+        cx = part.centre(:,:,1);
+        cy = part.centre(:,:,2);
+        cz = part.centre(:,:,3);
         
         % Dividing by constant factor to provide point just above surface
-        nx = points.unitNorm(:,X)/10;
-        ny = points.unitNorm(:,Y)/10;
-        nz = points.unitNorm(:,Z)/10;
+        nx = part.unitNorm(:,:,1)/10;
+        ny = part.unitNorm(:,:,2)/10;
+        nz = part.unitNorm(:,:,3)/10;
         plot3(nx + cx, ny + cy, nz + cz,'r*')
         
     end
@@ -126,21 +133,21 @@ for ii=1:nPoints
     %%
     if any(plotDefs == "local")
         
-        cx = points.centre(:,X);
-        cy = points.centre(:,Y);
-        cz = points.centre(:,Z);
+        cx = part.centre(:,:,1);
+        cy = part.centre(:,:,2);
+        cz = part.centre(:,:,3);
         
-        nx = points.unitNorm(:,X);
-        ny = points.unitNorm(:,Y);
-        nz = points.unitNorm(:,Z);
+        nx = part.unitNorm(:,:,1);
+        ny = part.unitNorm(:,:,2);
+        nz = part.unitNorm(:,:,3);
         
-        unitTx = points.unitTang(:,X);
-        unitTy = points.unitTang(:,Y);
-        unitTz = points.unitTang(:,Z);
+        unitTx = part.unitTang(:,:,1);
+        unitTy = part.unitTang(:,:,2);
+        unitTz = part.unitTang(:,:,3);
         
-        unitSx = points.unitSurf(:,X);
-        unitSy = points.unitSurf(:,Y);
-        unitSz = points.unitSurf(:,Z);
+        unitSx = part.unitSurf(:,:,1);
+        unitSy = part.unitSurf(:,:,2);
+        unitSz = part.unitSurf(:,:,3);
         
         [row,col] = size(nx);
         

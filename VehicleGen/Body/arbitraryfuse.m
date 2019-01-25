@@ -138,7 +138,7 @@ classdef arbitraryfuse < body
             y = y(keep,:);
             z = z(keep,:);
             
-            s.x = [0;aftLength] + offset;
+            x = [0;aftLength] + offset;
             
             rows = sum(keep);
             tots = sum(con,2);
@@ -173,15 +173,14 @@ classdef arbitraryfuse < body
             zint = zint-((zint(1)+zint(end))/2);
             yint(end) = 0;
             
-            s.y = yint;
-            s.z = zint;
+            points = xyztopoints(x,yint,zint);
             
             obj.Area = sum(A);
             obj.Height = height;
             obj.Width = width*2;
             obj.Length = aftLength;
             obj.Geometry = geo;
-            obj.Points = xyztopoints(s);
+            obj.Points = points;
         end
     end
 end

@@ -45,18 +45,19 @@ classdef nose < body
             end
             
             x = (x*cos(rot) - z*sin(rot)) - rotArm;
-            a.x = x - min(x(:));
-            a.y = y;
-            a.z = z*cos(rot)+(x-rotArm)*sin(rot);
-            obj.Points = xyztopoints(a);
+            
+            points(:,:,1) = x - min(x(:));
+            points(:,:,2)= y;
+            points(:,:,3) = z*cos(rot)+(x-rotArm)*sin(rot);
+            obj.Points = points;
             
             obj.Radius = r;
             obj.Length = ln;
             obj.zOff = zOff;
             obj.xPanels = xPanels;
             obj.Theta = theta;
-            obj.delta=delta;
-            obj.Rotation=rot;
+            obj.delta = delta;
+            obj.Rotation = rot;
         end
         
         function plot(obj)

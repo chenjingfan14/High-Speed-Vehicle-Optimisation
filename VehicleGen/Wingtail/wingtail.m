@@ -194,14 +194,14 @@ classdef wingtail
             end
             
             if boolean
-                wing.x = x_l;
-                wing.y = y_l;
-                wing.z = z_l;
+                points(:,:,1) = x_l;
+                points(:,:,2) = y_l;
+                points(:,:,3) = z_l;
                 obj.Name = "tail";
             else
-                wing.x = [x_u, fliplr(x_l)];
-                wing.y = [y_u, fliplr(y_l)];
-                wing.z = [z_u, fliplr(z_l)];
+                points(:,:,1) = [x_u, fliplr(x_l)];
+                points(:,:,2) = [y_u, fliplr(y_l)];
+                points(:,:,3) = [z_u, fliplr(z_l)];
                 obj.Name = "wing";
             end
             
@@ -214,7 +214,7 @@ classdef wingtail
             obj.MAC = cbar;
             obj.WetMAC = cbar;
             obj.Dihedral = di;
-            obj.Points = xyztopoints(wing);
+            obj.Points = points;
             obj.Partitions = nParts;
             obj.Boolean = boolean;
             

@@ -8,28 +8,40 @@ properties = properties(~cellfun('isempty',properties));
 
 dim = numel(properties);
 
-numParts = zeros(dim,1);
+numParts = ones(dim,1);
 
 for i=1:dim
-    numParts(i) = length(properties{i}.Points);
+    
+    propPoints = properties{i}.Points;
+    
+    if iscell(propPoints)
+        
+        numParts(i) = length(propPoints);
+    end
 end
 
 %% Create points structure
 % Count backwards for preallocation purposes
-id = sum(numParts);
+sumParts = sum(numParts);
+id = sumParts;
 
-for i=dim:-1:1
+for i = dim:-1:1
     
     propPoints = properties{i}.Points;
-    dim2 = length(propPoints);
+    dim2 = numParts(i);
     
     for j = dim2:-1:1
         % Calculate additional panel properties and assign data to separate
         % points structure outwith properties cell
-        points(id) = normals(propPoints(j));
+        if iscell(propPoints)
+            
+            points(id) = normals(propPoints{j});
+        else
+            points(id) = normals(propPoints);
+        end
         
+        %% DELETE? Need same amount of properties as point structures?
         newProperties{id} = properties{i};
-%         newProperties{id}.Name = points.Name;
          % Empty points in properties cell as we now have separate points struct
         newProperties{id}.Points = [];
         
@@ -38,18 +50,16 @@ for i=dim:-1:1
     end
 end
 
-dim = sum(numParts);
-
-bodyPart = true(dim,1);
-[impactMethod,shadowMethod,partType] = deal(zeros(dim,1));
+bodyPart = true(sumParts,1);
+[impactMethod,shadowMethod,partType] = deal(zeros(sumParts,1));
 
 partType = string(partType);
 
 %% Prediction method matrices
 % Numbers correspond to switch case in parent function (aeroprediction)
-for i=1:dim
+for i=1:sumParts
+    
     partType(i) = newProperties{i}.Name;
-%     partType(i) = propPoints.Name;
     
     % Prediction method mixer: Change method via aeroprediction
     % Impact:   1 - Modified Newtonian
@@ -83,8 +93,7 @@ for i=1:dim
         case "test"
             
             impactMethod(i) = 1;
-            shadowMethod(i) = 1;
-            
+            shadowMethod(i) = 1;         
     end 
 end
 

@@ -1,112 +1,92 @@
-function partStruct = normals(partStruct)
+function partStruct = normals(points)
 %% Additional panel specific properties
 % Calculate centre, outward facing normals, area
 
-for ii=1:length(partStruct)
-    
-    % Initialise and calculate centre points
-    x = partStruct(ii).x;
-    y = partStruct(ii).y;
-    z = partStruct(ii).z;
-    points = partStruct(ii).xyz;
-    
-    [dim1,dim2] = size(x);
-    
-    dim1 = dim1 - 1;
-    dim2 = dim2 - 1;
-    dim3 = dim2*3;
-    
-    at = points(1:end-1,1:end-3);
-    bt = points(2:end,1:end-3);
-    ct = points(2:end,4:end);
-    dt = points(1:end-1,4:end);
-    
-    centre = (at + bt + ct + dt)/4;
-    
-    X = 1:3:dim3;
-    Y = X + 1;
-    Z = Y + 1;
-    
-    yCentre = centre(:,Y);
-    zCentre = centre(:,Z);
-    
-    radialLocation = atan2d(yCentre - y(1),zCentre - z(1));
-    
-    %% Calculate normals of each panel
-    act = ct - at;
-    dbt = bt - dt;
-    
-    acx = act(:,X);
-    acy = act(:,Y);
-    acz = act(:,Z);
-    
-    dbx = dbt(:,X);
-    dby = dbt(:,Y);
-    dbz = dbt(:,Z);
-    
-    xNorm = dby.*acz - dbz.*acy;
-    yNorm = dbz.*acx - dbx.*acz;
-    zNorm = dbx.*acy - dby.*acx;
-    
-    % Magnitude of normal
-    magNorm = (xNorm.^2 + yNorm.^2 + zNorm.^2).^0.5;
+% Initialise and calculate centre points
+a = points(1:end-1,1:end-1,:);
+b = points(2:end,1:end-1,:);
+c = points(2:end,2:end,:);
+d = points(1:end-1,2:end,:);
 
-    [norm,unitNorm] = deal(zeros(dim1,dim3));
-    
-    norm(:,X) = xNorm;
-    norm(:,Y) = yNorm;
-    norm(:,Z) = zNorm;
-    
-    nx = xNorm./magNorm;
-    ny = yNorm./magNorm;
-    nz = zNorm./magNorm;
+centre = (a + b + c + d)/4;
 
-    unitNorm(:,X) = nx;
-    unitNorm(:,Y) = ny;
-    unitNorm(:,Z) = nz;
-    
-    % Some normal magnitudes are zero which leads to NaN. Replace such
-    % values with zero
-    con = isnan(unitNorm);
-    unitNorm(con) = 0;
-    
-    nyz = (ny.^2 + nz.^2).^0.5;
-    halfAngle = atan2(-nx,nyz)*180/pi;
-    
-    flow = nx < 0;
-    
-    del = round(halfAngle,10);
-    
-    con1 = del > 90;
-    con2 = del < -90;
-    del(con1) = 180 - del(con1);
-    del(con2) = -180 - del(con2);
-    del = del*pi/180;
-    
-    %% Calculate average deltas across each panel
-    
-    % Might not be needed if not using Pollock's method for viscous
-    % particle tracking
-    deltax = (x(2:end,:)-x(1:end-1,:)).^2 + (y(2:end,:)-y(1:end-1,:)).^2 + ...
-        (z(2:end,:)-z(1:end-1,:)).^2;
-    
-    deltay = (x(:,2:end)-x(:,1:end-1)).^2 + (y(:,2:end)-y(:,1:end-1)).^2 + ...
-        (z(:,2:end)-z(:,1:end-1)).^2;
-    
-    partStruct(ii).a = at;
-    partStruct(ii).b = bt;
-    partStruct(ii).c = ct;
-    partStruct(ii).d = dt;
-    partStruct(ii).centre = centre;
-    partStruct(ii).radialLocation = radialLocation;
-    partStruct(ii).norm = norm;
-    partStruct(ii).unitNorm = unitNorm;
-    partStruct(ii).deltax = deltax;
-    partStruct(ii).deltay = deltay;
-    partStruct(ii).area = panelarea(x,y,z);
-    partStruct(ii).del = del;
-    partStruct(ii).flow = flow;
-    
-end
+radialLocation = atan2d(centre(:,:,2) - points(1,1,2), centre(:,:,3) - points(1,1,3));
+
+%% Calculate normals of each panel
+ac = c - a;
+db = b - d;
+
+xNorm = db(:,:,2).*ac(:,:,3) - db(:,:,3).*ac(:,:,2);
+yNorm = db(:,:,3).*ac(:,:,1) - db(:,:,1).*ac(:,:,3);
+zNorm = db(:,:,1).*ac(:,:,2) - db(:,:,2).*ac(:,:,1);
+
+% Magnitude of normal
+magNorm = (xNorm.^2 + yNorm.^2 + zNorm.^2).^0.5;
+
+norm(:,:,1) = xNorm;
+norm(:,:,2) = yNorm;
+norm(:,:,3) = zNorm;
+
+unitNorm = norm./magNorm;
+
+% Some normal magnitudes are zero which leads to NaN. Replace such
+% values with zero
+con = isnan(unitNorm);
+unitNorm(con) = 0;
+
+nx = unitNorm(:,:,1);
+nyz = (unitNorm(:,:,2).^2 + unitNorm(:,:,3).^2).^0.5;
+halfAngle = atan2(-nx, nyz) * 180/pi;
+
+flow = nx < 0;
+
+del = round(halfAngle,10);
+
+con1 = del > 90;
+con2 = del < -90;
+del(con1) = 180 - del(con1);
+del(con2) = -180 - del(con2);
+del = del*pi/180;
+
+%% Calculate average deltas across each panel
+
+% Might not be needed if not using Pollock's method for viscous
+% particle tracking
+xDiff = diff(points,1,1);
+yDiff = diff(points,1,2);
+
+deltax = (xDiff(:,:,1).^2 + xDiff(:,:,2).^2 + xDiff(:,:,3).^2).^0.5;
+deltay = (yDiff(:,:,1).^2 + yDiff(:,:,2).^2 + yDiff(:,:,3).^2).^0.5;
+
+%% Calculate panel areas
+% Areas based on xyz vectors so any triangle can be input
+% Triangle one
+base = sqrt((b(:,:,1) - a(:,:,1)).^2 + (b(:,:,2) - a(:,:,2)).^2 + (b(:,:,3) - a(:,:,3)).^2);
+height = sqrt((d(:,:,1) - a(:,:,1)).^2 + (d(:,:,2) - a(:,:,2)).^2 + (d(:,:,3) - a(:,:,3)).^2);
+
+A1 = 0.5.*base.*height;
+
+% Triangle two
+base = sqrt((c(:,:,1) - d(:,:,1)).^2 + (c(:,:,2) - d(:,:,2)).^2 + (c(:,:,3) - d(:,:,3)).^2);
+height = sqrt((c(:,:,1) - b(:,:,1)).^2 + (c(:,:,2) - b(:,:,2)).^2 + (c(:,:,3) - b(:,:,3)).^2);
+
+A2 = 0.5.*base.*height;
+
+area = A1 + A2;
+
+partStruct.Points = points;
+partStruct.a = a;
+partStruct.b = b;
+partStruct.c = c;
+partStruct.d = d;
+partStruct.centre = centre;
+partStruct.radialLocation = radialLocation;
+partStruct.norm = norm;
+partStruct.unitNorm = unitNorm;
+partStruct.deltax = deltax;
+partStruct.deltay = deltay;
+partStruct.area = area;
+partStruct.del = del;
+partStruct.flow = flow;
 
 end

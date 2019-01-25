@@ -134,9 +134,8 @@ for Case = which
         y3(1,:) = y2(end,:);
         z3(1,:) = z2(end,:);
         
-        config(3).x = xp3;
-        config(3).y = y3;
-        config(3).z = z3;
+        config{3} = xyztopoints(xp3,y3,z3);
+        
         cellprop{3} = Properties;
         cellprop{3}.Name = "aftbody";
         
@@ -149,28 +148,19 @@ for Case = which
 
     end
     
-    config(1).x = xp;
-    config(1).y = y;
-    config(1).z = z;
-        
-    config(2).x = xp2;
-    config(2).y = y2;
-    config(2).z = z2;
-    
     cellprop{1} = Properties;
     cellprop{1}.Name = "forebody";
     cellprop{2} = Properties;
     cellprop{2}.Name = "aftbody";
     
-    config = xyztopoints(config);
+    config{1} = xyztopoints(xp,y,z);
+    config{2} = xyztopoints(xp2,y2,z2);
     
     for i=1:length(config)
         cellprop{i}.Points = config(i);
     end
     
     Aref(count) = pi*max(part)^2;
-    
-    plotter(config) 
     
     configsCell(count,:) = cellprop;
     

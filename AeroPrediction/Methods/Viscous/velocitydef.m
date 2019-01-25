@@ -9,17 +9,13 @@ for ii=1:length(partStruct)
     % Initialise normal coords
     unitNorm = partStruct(ii).unitNorm;
     
-    [dim1,dim3] = size(unitNorm);
+    dims = size(unitNorm);
     
-    X = 1:3:dim3;
-    Y = X + 1;
-    Z = Y + 1;
-    
-    nx = unitNorm(:,X);
-    ny = unitNorm(:,Y);
-    nz = unitNorm(:,Z);
+    nx = unitNorm(:,:,1);
+    ny = unitNorm(:,:,2);
+    nz = unitNorm(:,:,3);
 
-    [unitTang,unitSurf] = deal(zeros(dim1,dim3));
+    [unitTang,unitSurf] = deal(zeros(dims));
     
     Tx = ny.*Vz - nz.*Vy;
     Ty = nz.*Vx - nx.*Vz;
@@ -33,23 +29,16 @@ for ii=1:length(partStruct)
     
     Smag = (Sx.^2 + Sy.^2 + Sz.^2).^0.5;
     
-    unitTx = Tx./Tmag;
-    unitTy = Ty./Tmag;
-    unitTz = Tz./Tmag;
+    % Only becomes unit at end
+    unitTang(:,:,1) = Tx;
+    unitTang(:,:,2) = Ty;
+    unitTang(:,:,3) = Tz;
     
-    unitSx = Sx./Smag;
-    unitSy = Sy./Smag;
-    unitSz = Sz./Smag;
+    unitSurf(:,:,1) = Sx;
+    unitSurf(:,:,2) = Sy;
+    unitSurf(:,:,3) = Sz;
     
-    unitTang(:,X) = unitTx;
-    unitTang(:,Y) = unitTy;
-    unitTang(:,Z) = unitTz;
-    
-    unitSurf(:,X) = unitSx;
-    unitSurf(:,Y) = unitSy;
-    unitSurf(:,Z) = unitSz;
-    
-    partStruct(ii).unitTang = unitTang;
-    partStruct(ii).unitSurf = unitSurf;
+    partStruct(ii).unitTang = unitTang./Tmag;
+    partStruct(ii).unitSurf = unitSurf./Smag;
     
 end

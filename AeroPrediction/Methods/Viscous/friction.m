@@ -1,4 +1,4 @@
-function Cdf = friction(points,bodyPart,Aref,flow)
+function Cdf = friction(partStruct,bodyPart,Aref,flow)
 
 %% Eckert's Reference Temperature method
 % Iteration used in Hypersonic and High-Temperature Gas Dynamics
@@ -21,13 +21,12 @@ r = Pr.^(1/3);
 
 Cdf = 0;
 
-for i = 1:numel(points)
+for i = 1:numel(partStruct)
     
-    part = points(i);
+    part = partStruct(i);
+    points = part.Points;
     area = part.area;
-    xCentre = part.centre(:,1:3:end);
-    yCentre = part.centre(:,2:3:end);
-    zCentre = part.centre(:,3:3:end);
+    centre = part.centre;
     
     % If part is body part. TODO: Clean this here AND in
     % aeroprediction/flowfinder
@@ -37,30 +36,24 @@ for i = 1:numel(points)
     % wing/tail. LEx = first row of panels. Else part is a body part that
     % is not the nose, and the LEx is therefore the nose.
     if i == 1 || ~con
-        LEx = (part.x(1,1:end-1) +  part.x(1,2:end))/2;
-        LEy = (part.x(1,1:end-1) +  part.x(1,2:end))/2;
-        LEz = (part.x(1,1:end-1) +  part.x(1,2:end))/2;
+        
+        LE = (points(1,1:end-1,:) +  points(1,2:end,:))/2;
         
         % If nose, save for future body parts, only need to save one of the
         % xPoints as 
         if con
-            xNose = LEx(1);
-            yNose = LEy(1);
-            zNose = LEz(1);
+            
+            nose = LE(1,1,:);
         end
     else
-        LEx = xNose;
-        LEy = yNose;
-        LEz = zNose;
+        LE = nose;
     end
         
         
     % Distance from leading edge. Must be nose for fore/aftbody
-    x = xCentre - LEx;
-    y = yCentre - LEy;
-    z = zCentre - LEz;
+    xyz = centre - LE;
     
-    dist = (x.^2 + y.^2 + z.^2).^0.5;
+    dist = (xyz(:,:,1).^2 + xyz(:,:,2).^2 + xyz(:,:,3).^2).^0.5;
     
     Tt = Te*(1 + (gamma - 1)*((Me^2)/2));
     

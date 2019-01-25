@@ -7,78 +7,44 @@ function partStruct = rotate(partStruct,rotCentre,alpha)
 
 for i=1:length(partStruct)
     
-    part = partStruct(i);
+    points = partStruct(i).Points;
     
-    x = part.x - rotCentre;
-    y = part.y;
-    z = part.z;
+    % Rotating in the xz plane
+    points(:,:,1) = ((points(:,:,1) - rotCentre) * cos(alpha) + points(:,:,3) * sin(alpha)) + rotCentre;
+    points(:,:,3) = points(:,:,3)*cos(alpha) - points(:,:,1)*sin(alpha);
     
-    xrot = (x*cos(alpha) + z*sin(alpha)) + rotCentre;
-    yrot = y;
-    zrot = z*cos(alpha) - x*sin(alpha);
+    a = points(1:end-1,1:end-1,:);
+    b = points(2:end,1:end-1,:);
+    c = points(2:end,2:end,:);
+    d = points(1:end-1,2:end,:);
     
-    [dim1,dim2] = size(x);
+    centre = (a + b + c + d)/4;
     
-    points = zeros(dim1,dim2*3);
+    %% Calculate normals of each panel
+    ac = c - a;
+    db = b - d;
+
+    xNorm = db(:,:,2).*ac(:,:,3) - db(:,:,3).*ac(:,:,2);
+    yNorm = db(:,:,3).*ac(:,:,1) - db(:,:,1).*ac(:,:,3);
+    zNorm = db(:,:,1).*ac(:,:,2) - db(:,:,2).*ac(:,:,1);
     
-    X = 1:3:dim2*3;
-    Y = X + 1;
-    Z = Y + 1;
-    
-    points(:,X) = xrot;
-    points(:,Y) = y;
-    points(:,Z) = zrot;
-    
-    at = points(1:end-1,1:end-3);
-    bt = points(2:end,1:end-3);
-    ct = points(2:end,4:end);
-    dt = points(1:end-1,4:end);
-    
-    centre = (at + bt + ct + dt)/4;
-    [dim3,dim4] = size(centre);
-    
-    act = ct - at;
-    dbt = bt - dt;
-    
-    X = 1:3:dim4;
-    Y = X + 1;
-    Z = Y + 1;
-    
-    acx = act(:,X);
-    acy = act(:,Y);
-    acz = act(:,Z);
-    
-    dbx = dbt(:,X);
-    dby = dbt(:,Y);
-    dbz = dbt(:,Z);
-     
-    xNorm = dby.*acz - dbz.*acy;
-    yNorm = dbz.*acx - dbx.*acz;
-    zNorm = dbx.*acy - dby.*acx;
-    
-    normnorm = (xNorm.^2 + yNorm.^2 + zNorm.^2).^0.5;
+    magNorm = (xNorm.^2 + yNorm.^2 + zNorm.^2).^0.5;
     
     % Zero magnitude normals (ie lines not planes) will give NaN when 
     % normalising normal components, so set to small value to avoid this
-    con = normnorm == 0;
-    normnorm(con) = 1e-20;
+    con = magNorm == 0;
+    magNorm(con) = 1e-20;
     
-    [unitNorm,norm] = deal(zeros(dim3,dim4));
+    norm = zeros(size(magNorm));
     
-    xUnitNorm = xNorm./normnorm;
-    yUnitNorm = yNorm./normnorm;
-    zUnitNorm = zNorm./normnorm;
+    norm(:,:,1) = xNorm;
+    norm(:,:,2) = yNorm;
+    norm(:,:,3) = zNorm;
     
-    norm(:,X) = xNorm;
-    norm(:,Y) = yNorm;
-    norm(:,Z) = zNorm;
+    unitNorm = norm./magNorm;
     
-    unitNorm(:,X) = xUnitNorm;
-    unitNorm(:,Y) = yUnitNorm;
-    unitNorm(:,Z) = zUnitNorm;
-    
-    yzUnitNorm = (yUnitNorm.^2 + zUnitNorm.^2).^0.5;
-    halfAngle = atan2(-xUnitNorm,yzUnitNorm)*180/pi;
+    yzUnitNorm = (unitNorm(:,:,2).^2 + unitNorm(:,:,3).^2).^0.5;
+    halfAngle = atan2(-unitNorm(:,:,1),yzUnitNorm)*180/pi;
     
     flow = xNorm < 0;
     
@@ -90,10 +56,7 @@ for i=1:length(partStruct)
     del(con2) = -180 - del(con2);
     del = del*pi/180;
     
-    partStruct(i).x = xrot;
-    partStruct(i).y = yrot;
-    partStruct(i).z = zrot;
-    partStruct(i).xyz = points;
+    partStruct(i).Points = points;
     partStruct(i).norm = norm;
     partStruct(i).unitNorm = unitNorm;
     partStruct(i).centre = centre;
@@ -105,3 +68,4 @@ end
 %% Then plot using any plotter function
 % plotnorms(partArray);
 % plotter(partArray);
+end

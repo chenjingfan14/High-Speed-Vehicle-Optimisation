@@ -1,18 +1,17 @@
-function new = discwing(old)
+function wingtail = discwing(wingtail)
 
-new = old;
-target = old.delta;
-dim1 = length(new);
-controlSurf = new.Control.Surf;
+target = wingtail.delta;
+dim1 = length(wingtail);
+controlSurf = wingtail.Control.Surf;
 
 for ii=1:dim1
     
-    wingtail = old(ii);
+    bool = wingtail(ii).Boolean;
+    xyz = wingtail(ii).Points;
     
-    bool = wingtail.Boolean;
-    x = wingtail.Points.x;
-    y = wingtail.Points.y;
-    z = wingtail.Points.z;
+    x = xyz(:,:,1);
+    y = xyz(:,:,2);
+    z = xyz(:,:,3);
     
     [rows,c1] = size(x);
     
@@ -27,8 +26,8 @@ for ii=1:dim1
         
         % Base spanwise discretisation on either upper or lower aerofoil,
         % pick based on smallest of span of the two
-        upperDiff = abs(yzbar(c1/2) - yzbar(1));
-        lowerDiff = abs(yzbar((c1/2)+1) - yzbar(end));
+        upperDiff = abs(diff(yzbar([1 c1/2])));
+        lowerDiff = abs(diff(yzbar([end (c1/2)+1])));
         
         minDiff = min(upperDiff,lowerDiff);
         
@@ -121,12 +120,12 @@ for ii=1:dim1
     newControl(first) = false;
 
     %% Update points to include discretisation
-    new(ii).Control.Surf = [newControl, fliplr(newControl)];
+    wingtail(ii).Control.Surf = [newControl, fliplr(newControl)];
     
-    new(ii).Points.x = xp;
-    new(ii).Points.y = yp;
-    new(ii).Points.z = zp;
-    new(ii).Points = xyztopoints(new(ii).Points);
+    wingtail(ii).Points = [];
+    wingtail(ii).Points(:,:,1) = xp;
+    wingtail(ii).Points(:,:,2) = yp;
+    wingtail(ii).Points(:,:,3) = zp;
 end
 
 %% Plot undiscretised wing and new discretised version
