@@ -5,6 +5,7 @@ classdef wingtail_struct
         Conical = false
         delta = 1
         Offset
+        % CHANGE: setting as +1
         xPanels = 5
         % "Linear", "Cosine" or "HalfCosine"
         Distribution = "Cosine"
@@ -19,6 +20,7 @@ classdef wingtail_struct
         WetSpan
         WetMAC
         Partitions
+        Box
         Skin
         Spars
         Control
@@ -118,12 +120,13 @@ classdef wingtail_struct
                 end
             end
             
+            sparsFront = sparsFront(:);
+            
             sparEdges = [sparBegin(1); sparEnd(end)];
             between = xnorm >= sparEdges(1) & xnorm <= sparEdges(2);
             xBox = xnorm(between);
             
-            [foilUp,foilLo] = deal(zeros(numel(xnorm),nParts+1));
-            [boxUp,boxLo] = deal(zeros(numel(xBox),nParts+1));
+            [foilUp,foilLo] = deal(zeros(numel(xnorm),nSecs));
             
             for i=1:nSecs
                 
@@ -139,11 +142,11 @@ classdef wingtail_struct
                 % x-discretisation 
                 foilUp(:,i) = interp1(upper(:,1),upper(:,2),xnorm,'pchip'); % interpolates sample data wrt defined chorwise points
                 foilLo(:,i) = interp1(lower(:,1),lower(:,2),xnorm,'pchip');
-                
-                boxUp(:,i) = foilUp(between,i);
-                boxLo(:,i) = foilLo(between,i);
             end
                
+            boxUp = foilUp(between,:);
+            boxLo = foilLo(between,:);
+            
             %% Control surfaces
             if exist('control','var')
                 
@@ -204,145 +207,95 @@ classdef wingtail_struct
             
             %%
             
-            z = bh * sin(di);
+            bh(:,:,2) = bh * sin(di);
             
             % Calculates all xpoints with leading edge sweep offset
-            [x_u,x_l] = deal(xnorm.*chord + xLE);
+            [wingUpper, wingLower] = deal(xnorm.*chord + xLE);
             
             if di < pi/4 && di > -pi/4
                 
-                yWingUp = bh + foilUp * -sin(di) .* chord;
-                zWingUp = z + foilUp * cos(di) .* chord;
-                yWingLo = bh + foilLo * -sin(di) .* chord;
-                zWingLo = z + foilLo * cos(di) .* chord;
+                % Create y, z rotation matrix, centreline chord should
+                % have zero degree rotation for symmetry
+                rotation = [0, 1; repmat([-sin(di) cos(di)], nParts, 1)];
+                rotation = permute(rotation,[3,1,2]);
                 
-                yBoxUpOut = bh + boxUp * -sin(di) .* chord;
-                zBoxUpOut = z + boxUp * cos(di) .* chord;
-                yBoxLoOut = bh + boxLo * -sin(di) .* chord;
-                zBoxLoOut = z + boxLo * cos(di) .* chord;
+                wingUpper(:,:,[2 3]) = bh + foilUp .* rotation .* chord;
+                wingLower(:,:,[2 3]) = bh + foilLo .* rotation .* chord;
                 
-                % Interp/Extrapolate to align root with centreline
-                if di~=0
-                    
-                    zWingUp(:,1) = zWingUp(:,1)+(-yWingUp(:,1).*((zWingUp(:,2)-zWingUp(:,1))./(yWingUp(:,2)-yWingUp(:,1))));
-                    yWingUp(:,1) = 0;
-                    zWingLo(:,1) = zWingLo(:,1)+(-yWingLo(:,1).*((zWingLo(:,2)-zWingLo(:,1))./(yWingLo(:,2)-yWingLo(:,1))));
-                    yWingLo(:,1) = 0;
-                    
-                    zBoxUpOut(:,1) = zBoxUpOut(:,1)+(-yBoxUpOut(:,1).*((zBoxUpOut(:,2)-zBoxUpOut(:,1))./(yBoxUpOut(:,2)-yBoxUpOut(:,1))));
-                    yBoxUpOut(:,1) = 0;
-                    zBoxLoOut(:,1) = zBoxLoOut(:,1)+(-yBoxLoOut(:,1).*((zBoxLoOut(:,2)-zBoxLoOut(:,1))./(yBoxLoOut(:,2)-yBoxLoOut(:,1))));
-                    yBoxLoOut(:,1) = 0;
-                end
+                yzBoxUpperOut = bh + boxUp .* rotation .*chord;
+                yzBoxLowerOut = bh + boxLo .* rotation .*chord;
+                
+                yzBoxUpperIn = yzBoxUpperOut - (skinThick * rotation .* chord);
+                yzBoxLowerIn = yzBoxLowerOut + (skinThick * rotation .* chord);
             else
                 % This doesn't work
             end
             
+            [boxUpperOut, boxLowerOut, boxUpperIn, boxLowerIn] = deal(xBox * chord + xLE); 
+            boxUpperOut(:,:,[2 3]) = yzBoxUpperOut;
+            boxLowerOut(:,:,[2 3]) = yzBoxLowerOut;
+            boxUpperIn(:,:,[2 3]) = yzBoxUpperIn;
+            boxLowerIn(:,:,[2 3]) = yzBoxLowerIn;
+            
             %% Wingbox
+                
+            con = any(sparsFront == xBox');
             
-            zBoxUpIn = zBoxUpOut - (skinThick * chord);
-            zBoxLoIn = zBoxLoOut + (skinThick * chord);
+            a = boxUpperIn(con,:,:);
+            b = boxLowerIn(con,:,:);
             
-            yBoxUpIn = yBoxLoOut + (zBoxUpIn - zBoxLoOut).*((yBoxUpOut - yBoxLoOut)./(zBoxUpOut - zBoxLoOut));
-            yBoxLoIn = yBoxLoOut + (zBoxLoIn - zBoxLoOut).*((yBoxUpOut - yBoxLoOut)./(zBoxUpOut - zBoxLoOut));
+            [row,~] = size(a);
             
-%             y = y0 + (x - x0).*((y1 - y0)./(x1 - x0));
+            j = 2*row;
+            for i = 3:-1:1
+                
+                sparPoints(:,:,i) = reshape([a(:,:,i) b(:,:,i)]',[],j)';
+            end
             
             for i = numSpars:-1:1
                 
-                con = any(sparsFront(:,i) == xBox');
-                
-                ax = (sparsFront(:,i) .* chord + xLE)';
-                bx = (sparsFront(:,i) .* chord + xLE)';
-                
-                ay = yBoxUpOut(con,:)';
-                by = yBoxLoOut(con,:)';
-                
-                az = zBoxUpIn(con,:)';
-                bz = zBoxLoIn(con,:)';
-                
-                [dim,~] = size(ax);
-                
-                spars.x = reshape([ax(:) bx(:)]', 2*dim,[])';
-                spars.y = reshape([ay(:) by(:)]', 2*dim,[])';
-                spars.z = reshape([az(:) bz(:)]', 2*dim,[])';
-                
-                spars = xyztopoints(spars);
-                
-                % 4 points for each spar, 3 coords per point, repeated for
-                % number of sections
-                sparCell(i,:) = mat2cell(spars.xyz,2,repmat(2*dim,1,nSecs));
-                                
-%                 xSparsFront(:,:,i) = repmat(sparsFront(i),2,1);
-%                 ySparsFront(:,:,i) = [yBoxUp(con,:); yBoxLo(con,:)];
-%                 zSparsFront(:,:,i) = [zBoxUpIn(con,:); zBoxLoIn(con,:)];
-%                 
-%                 con = sparsBack(i,:) == xBox;
-%                 
-%                 xSparsBack(:,:,i) = repmat(sparsBack(i),2,1);
-%                 ySparsBack(:,:,i) = [yBoxUp(con,:); yBoxLo(con,:)];
-%                 zSparsBack(:,:,i) = [zBoxUpIn(con,:); zBoxLoIn(con,:)];
-                
-                
-                
+                sparCell{i,:} = sparPoints(j-3:j,:,:);
+                j = j - 4;
             end
             
-            
-%             xSparsFront = xSparsFront .* chord + xLE;
-%             xSparsBack = xSparsBack .* chord + xLE;
-            
-            xBox = xBox * chord + xLE;
-            
-            figure
-            hold on
-            axis equal
-            plot3(x_u,yWingUp,zWingUp,'k')
-            plot3(x_l,yWingLo,zWingLo,'k')
-            
-            plot3(xBox,yBoxUpOut,zBoxUpOut,'r')
-            plot3(xBox,yBoxLoOut,zBoxLoOut,'r')
-            plot3(xBox,yBoxUpIn,zBoxUpIn,'r')
-            plot3(xBox,yBoxLoIn,zBoxLoIn,'r')
-            
-            plot3(xBox,yBoxUpOut,zBoxUpOut,'r.')
-            plot3(xBox,yBoxLoOut,zBoxLoOut,'r.')
-            plot3(xBox,yBoxUpIn,zBoxUpIn,'r.')
-            plot3(xBox,yBoxLoIn,zBoxLoIn,'r.')
-            
-            % Stupid replication to produce entire box output
-%             xSpars(end+1,:) = xSpars(1,:);
-%             ySpars(end+1,:) = ySpars(1,:);
-%             zSpars(end+1,:) = zSpars(1,:);
-            
+            %% Proof plotting
+%             figure
+%             hold on
+%             axis equal
+%             plot3(wingUpper(:,:,1),wingUpper(:,:,2),wingUpper(:,:,3),'k')
+%             plot3(wingLower(:,:,1),wingLower(:,:,2),wingLower(:,:,3),'k')
+%             
+%             plot3(boxUpperOut(:,:,1),boxUpperOut(:,:,2),boxUpperOut(:,:,3),'r')
+%             plot3(boxLowerOut(:,:,1),boxLowerOut(:,:,2),boxLowerOut(:,:,3),'r')
+%             
+%             plot3(boxUpperIn(:,:,1),boxUpperIn(:,:,2),boxUpperIn(:,:,3),'r')
+%             plot3(boxLowerIn(:,:,1),boxLowerIn(:,:,2),boxLowerIn(:,:,3),'r')
+% 
 %             for i = 1:numSpars
 %                 
-%                 plot3(xSparsFront(:,i),ySparsFront(:,i),zSparsFront(:,i),'r.')
-%                 plot3(xSparsBack(:,i),ySparsBack(:,i),zSparsBack(:,i),'r.')
+%                 plot3(sparCell{i}(:,:,1),sparCell{i}(:,:,2),sparCell{i}(:,:,3),'r.')
+%                 plot3(sparCell{i}(:,:,1),sparCell{i}(:,:,2),sparCell{i}(:,:,3),'r.')
 %             end
-            
-            hold off
+%             
+%             hold off
             
             %%
-            if ~isequal(zWingUp(end,:),zWingLo(end,:))
-                x_u(end+1,:) = x_l(end,:);
-                yWingUp(end+1,:) = yWingLo(end,:);
-                zWingUp(end+1,:) = zWingLo(end,:);
-                x_l(end+1,:) = x_l(end,:);
-                yWingLo(end+1,:) = yWingLo(end,:);
-                zWingLo(end+1,:) = zWingLo(end,:);
+            if ~isequal(wingUpper(end,:,:),wingLower(end,:,:))
+                
+                wingUpper(end+1,:,:) = wingLower(end,:,:);
+                wingLower = wingLower([1:end end],:,:);
+                
+                between(end+1) = false;
+                
             end
             
             if boolean
                 
-                wing.x = x_l;
-                wing.y = yWingLo;
-                wing.z = zWingLo;
+                points = wingLower;
                 obj.Name = "tail";
             else
                 
-                wing.x = [x_u, fliplr(x_l)];
-                wing.y = [yWingUp, fliplr(yWingLo)];
-                wing.z = [zWingUp, fliplr(zWingLo)];
+                points = [wingUpper, fliplr(wingLower)];
                 obj.Name = "wing";
             end
             
@@ -350,39 +303,14 @@ classdef wingtail_struct
             
             for i = nSecs:-1:1
                 
-                xSkinUpper(:,:,i) = repmat(xBox(:,i),1,2);
-                ySkinUpper(:,:,i) = repmat(yBoxUpOut(:,i),1,2);
-                zSkinUpper(:,:,i) = [zBoxUpOut(:,i), zBoxUpIn(:,i)];
-                
-                xSkinLower(:,:,i) = repmat(xBox(:,i),1,2);
-                ySkinLower(:,:,i) = repmat(yBoxLoOut(:,i),1,2);
-                zSkinLower(:,:,i) = [zBoxLoOut(:,i), zBoxLoIn(:,i)];
+                skin.Upper{i} = [boxUpperOut(:,i,:), boxUpperIn(:,i,:)];
+                skin.Lower{i} = [boxLowerOut(:,i,:), boxLowerIn(:,i,:)];
+                skin.UpperMean{i} = squeeze((boxUpperOut(:,i,:) + boxUpperIn(:,i,:))/2);
+                skin.LowerMean{i} = squeeze((boxLowerOut(:,i,:) + boxLowerIn(:,i,:))/2);
             end
-            
-            skin.Upper.x = xSkinUpper;
-            skin.Upper.y = ySkinUpper;
-            skin.Upper.z = zSkinUpper;
-            
-            skin.Lower.x = xSkinLower;
-            skin.Lower.y = ySkinLower;
-            skin.Lower.z = zSkinLower;
             
             spars.Thickness = sparThick * chord;
             spars.Points = sparCell;
-            
-%             spars.Front.x = xSparsFront;
-%             spars.Front.y = ySparsFront;
-%             spars.Front.z = zSparsFront;
-%             
-%             spars.Back.x = xSparsBack;
-%             spars.Back.y = ySparsBack;
-%             spars.Back.z = zSparsBack;
-            
-            skin.Upper = xyztopoints(skin.Upper);
-            skin.Lower = xyztopoints(skin.Lower);
-            
-%             spars.Front = xyztopoints(spars.Front);
-%             spars.Back = xyztopoints(spars.Back);
             
             obj.Chord = chord;
             obj.WetChord = chord;
@@ -393,7 +321,8 @@ classdef wingtail_struct
             obj.MAC = cbar;
             obj.WetMAC = cbar;
             obj.Dihedral = di;
-            obj.Points = xyztopoints(wing);
+            obj.Points = points;
+            obj.Box = between;
             obj.Skin = skin;
             obj.Spars = spars;
             obj.Partitions = nParts;

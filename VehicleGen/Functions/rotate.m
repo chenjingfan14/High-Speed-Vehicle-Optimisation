@@ -30,10 +30,12 @@ for i=1:length(partStruct)
     
     magNorm = (xNorm.^2 + yNorm.^2 + zNorm.^2).^0.5;
     
+    %% CHECK
     % Zero magnitude normals (ie lines not planes) will give NaN when 
     % normalising normal components, so set to small value to avoid this
     con = magNorm == 0;
     magNorm(con) = 1e-20;
+    %%
     
     norm = zeros(size(magNorm));
     

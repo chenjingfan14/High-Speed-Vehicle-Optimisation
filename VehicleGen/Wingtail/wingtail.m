@@ -8,6 +8,7 @@ classdef wingtail
         xPanels = 50
         % "Linear", "Cosine" or "HalfCosine"
         Distribution = "Cosine"
+        xNorm
         Points
         Chord
         Area
@@ -19,7 +20,11 @@ classdef wingtail
         WetSpan
         WetMAC
         Partitions
+        Box
+        Skin
+        Spar
         Control
+        TrailingEdge = false;
         Boolean
         
     end
@@ -76,17 +81,17 @@ classdef wingtail
             %% Wing x-distribution
             switch picker
                 case "Linear"
-                    xnorm = X/max(X);
+                    xNorm = X/max(X);
                 case "Cosine"
-                    xnorm = 0.5*(1-cos((X*pi)/max(X)));
+                    xNorm = 0.5*(1-cos((X*pi)/max(X)));
                 case "HalfCosine"
-                    xnorm = 1-cos((X*(pi/2))/max(X));
+                    xNorm = 1-cos((X*(pi/2))/max(X));
             end
             
-            %% Aerofoil Section x-Discretisation
+            %% Aerofoil Section & Wingbox x-Discretisation
             
-            [FoilUp,FoilLo] = deal(zeros(size(xnorm,1),nParts+1));
-
+            [foilUp,foilLo] = deal(zeros(numel(xNorm),nSecs));
+            
             for i=1:nSecs
                 
                 Sec = sections{i};
@@ -99,8 +104,8 @@ classdef wingtail
                 
                 % Interpolate z given section xz coords and defined 
                 % x-discretisation 
-                FoilUp(:,i) = interp1(upper(:,1),upper(:,2),xnorm,'pchip'); % interpolates sample data wrt defined chorwise points
-                FoilLo(:,i) = interp1(lower(:,1),lower(:,2),xnorm,'pchip');
+                foilUp(:,i) = interp1(upper(:,1),upper(:,2),xNorm,'pchip'); % interpolates sample data wrt defined chorwise points
+                foilLo(:,i) = interp1(lower(:,1),lower(:,2),xNorm,'pchip');
             end
             
             %% Control surfaces
@@ -124,15 +129,15 @@ classdef wingtail
                 xLE = [xLE, controlxLE];
                 xLE = xLE(IDorder);
                 
-                controlFoilUp = interp1(bh,FoilUp',bhControl)';
+                controlFoilUp = interp1(bh,foilUp',bhControl)';
                 
-                FoilUp = [FoilUp, controlFoilUp];
-                FoilUp = FoilUp(:,IDorder);
+                foilUp = [foilUp, controlFoilUp];
+                foilUp = foilUp(:,IDorder);
                 
-                controlFoilLo = interp1(bh,FoilLo',bhControl)';
+                controlFoilLo = interp1(bh,foilLo',bhControl)';
                 
-                FoilLo = [FoilLo, controlFoilLo];
-                FoilLo = FoilLo(:,IDorder);
+                foilLo = [foilLo, controlFoilLo];
+                foilLo = foilLo(:,IDorder);
                  
                 % Including control spans into full config and sorting
                 bh = bhSort;
@@ -149,62 +154,57 @@ classdef wingtail
                 % the other (begin/end control surface)
                 controlSurf([first last]) = false; 
                 
-                [~,ID] = min(abs(control(3) - xnorm));
+                [~,ID] = min(abs(control(3) - xNorm));
                 
-                xnorm = repmat(xnorm,1,max(IDorder));
+                xNorm = repmat(xNorm,1,max(IDorder));
                 
                 obj.Control.ChordID = ID;
                 obj.Control.Surf = controlSurf;
             else
+                
                 obj.Control.ChordID = 0;
                 obj.Control.Surf = zeros(nSecs,1);
             end
             
             %%
             
-            z = bh * sin(di);
+            bh(:,:,2) = bh * sin(di);
             
             % Calculates all xpoints with leading edge sweep offset
-            [x_u,x_l] = deal(xnorm.*chord + xLE);
+            [wingUpper, wingLower] = deal(xNorm.*chord + xLE);
             
             if di < pi/4 && di > -pi/4
-                y_u = bh + FoilUp * -sin(di) .* chord;
-                z_u = z + FoilUp * cos(di) .* chord;
-                y_l = bh + FoilLo * -sin(di) .* chord;
-                z_l = z + FoilLo * cos(di) .* chord;
                 
-                % Interp/Extrapolate to align root with centreline
-                if di~=0
-                    z_u(:,1) = z_u(:,1)+(-y_u(:,1).*((z_u(:,2)-z_u(:,1))./(y_u(:,2)-y_u(:,1))));
-                    y_u(:,1) = 0;
-                    z_l(:,1) = z_l(:,1)+(-y_l(:,1).*((z_l(:,2)-z_l(:,1))./(y_l(:,2)-y_l(:,1))));
-                    y_l(:,1) = 0;
-                end
+                % Create y, z rotation matrix, centreline chord should
+                % have zero degree rotation for symmetry
+                rotation = [0, 1; repmat([-sin(di) cos(di)], nParts, 1)];
+                rotation = permute(rotation,[3,1,2]);
+                
+                wingUpper(:,:,[2 3]) = bh + foilUp .* rotation .* chord;
+                wingLower(:,:,[2 3]) = bh + foilLo .* rotation .* chord;
             else
                 % This doesn't work
             end
             
-            if ~isequal(z_u(end,:),z_l(end,:))
-                x_u(end+1,:) = x_l(end,:);
-                y_u(end+1,:) = y_l(end,:);
-                z_u(end+1,:) = z_l(end,:);
-                x_l(end+1,:) = x_l(end,:);
-                y_l(end+1,:) = y_l(end,:);
-                z_l(end+1,:) = z_l(end,:);
+            if ~isequal(wingUpper(end,:,:),wingLower(end,:,:))
+                
+                wingUpper(end+1,:,:) = wingLower(end,:,:);
+                wingLower = wingLower([1:end end],:,:);
+                
+                xNorm(end+1) = 1;
+                obj.TrailingEdge = true;
             end
             
             if boolean
-                points(:,:,1) = x_l;
-                points(:,:,2) = y_l;
-                points(:,:,3) = z_l;
+                
+                points = wingLower;
                 obj.Name = "tail";
             else
-                points(:,:,1) = [x_u, fliplr(x_l)];
-                points(:,:,2) = [y_u, fliplr(y_l)];
-                points(:,:,3) = [z_u, fliplr(z_l)];
+                
+                points = [wingUpper, fliplr(wingLower)];
                 obj.Name = "wing";
             end
-            
+
             obj.Chord = chord;
             obj.WetChord = chord;
             obj.Span = semispan;
@@ -214,6 +214,7 @@ classdef wingtail
             obj.MAC = cbar;
             obj.WetMAC = cbar;
             obj.Dihedral = di;
+            obj.xNorm = xNorm;
             obj.Points = points;
             obj.Partitions = nParts;
             obj.Boolean = boolean;

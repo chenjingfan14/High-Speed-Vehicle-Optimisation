@@ -89,21 +89,10 @@ for i=wingDim:-1:1
     if Control
 %         control = configPos(varArray == ");
         liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
-    
-    end
-    
-    if Structure
-        
-        wingbox.Location = [0.1,0.8]';
-        wingbox.SparThick = 0.010;
-        wingbox.SkinThick = 0.005;
-        liftSurface(i) = wingtail_struct(dihedral,semispan,chord,sweep,sections,wingbox);
-%         structures(liftSurface);
-    else
-        
+    else 
         liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
     end
-    
+        
     if Aft
         
         % Factor to determine how much the wing/tail is shifted in 
@@ -302,6 +291,15 @@ for i=wingDim:-1:1
         
         % Discretise aerofoils based on target length
         liftSurface = discwing(liftSurface);
+        
+        if Structure && i == 1
+            
+            wingbox.Location = [0.1,0.8]';
+            wingbox.SparThick = 0.010;
+            wingbox.SkinThick = 0.005;
+            
+            liftSurface = wingstructure(liftSurface,wingbox);
+        end
         
     end
         

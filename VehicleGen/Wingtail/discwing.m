@@ -121,11 +121,7 @@ for ii=1:dim1
 
     %% Update points to include discretisation
     wingtail(ii).Control.Surf = [newControl, fliplr(newControl)];
-    
-    wingtail(ii).Points = [];
-    wingtail(ii).Points(:,:,1) = xp;
-    wingtail(ii).Points(:,:,2) = yp;
-    wingtail(ii).Points(:,:,3) = zp;
+    wingtail(ii).Points = xyztopoints(xp,yp,zp);
 end
 
 %% Plot undiscretised wing and new discretised version

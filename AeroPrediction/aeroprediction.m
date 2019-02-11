@@ -37,6 +37,7 @@ shielding = options.Shielding;
 viscous = options.Viscous;
 control = options.Control;
 baseline = options.Baseline;
+structures = options.Structure;
 
 for i=1:runs
     %% Outer flight state loop
@@ -316,6 +317,13 @@ for i=1:runs
             foilCount = foilCount+1;
         end
         
+        %% Structures
+        if partType(j) == "wing" && structures
+        
+            wingPressure{i} = P .* -unitNorm;
+            structure(partProp, part, wingPressure{i});
+        end
+        
         %% Calculate total part aerodynamic characteristics
         
         centre = squeeze(reshape(centre,[],1,3));
@@ -351,10 +359,6 @@ for i=1:runs
         MinfPrev = Minf;
         alphaPrev = alpha;
         deltaPrev = delta;
-        
-        % if partName
-        wingPressure{i} = P;
-        
     end
     
     %% Friction calculation
@@ -424,10 +428,6 @@ results.Mbar = Mbar;
 results.Lbar = Lbar;
 results.Dbar = Dbar;
 results.copBar = copBar;
-
-%% Structures
-
-% structures(properties(partType == "wing"), points(partType == "wing"));
 
 %% Translate aerodynamic characteristics to cost function values
 % Usually non-dimensionalised
