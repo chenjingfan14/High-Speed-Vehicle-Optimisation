@@ -7,21 +7,16 @@ tic
 
 addpath(genpath('GeneticAlgorithm'))
 
-% Swarm size (must be divisible by 2 & 3 for global best and mutation
-% subsets in MOPSO)
+%% Main GA program (Only single-objective currently available)
+
+% nPop must be even
 nPop = 60;
 maxIt = 50; % Maximum number of iterations
-
-w = 0.3; % Intertia coeff
-c1 = 1.49; % Personal acceleration coeff
-c2 = 1.49; % Social acceleration coeff
 
 % Number of decision variables (cost function values)
 nFun = 1;
 
 fi = maxIt; % Display Pareto Front evey fi iterations
-
-%% Main GA program (Only single-objective currently available)
 
 % If opt cost function value = max(f(x)) (rather than min) then can use
 % this to invert CF values for display purposes
@@ -29,13 +24,14 @@ inv = false;
 % Max stall values before simulation ends
 maxStall = 50;
 
-%% Controling paramters of the GA algortihm
+% Controling paramters of the GA algortihm
 Pc = 0.95;         % Probablility of crossover
 Pm = 1/nVar;        % Probability of mutation 
 Er = 0.2;          % Elitism ratio 
 
 [GlobalBestFit,GlobalBestPos,history] = GeneticAlgorithm(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,Pc,Pm,Er,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 
+%% Begin post-processing
 % If running on cluster, close down parallel loop
 if cluster
     delete(gcp('nocreate'));
