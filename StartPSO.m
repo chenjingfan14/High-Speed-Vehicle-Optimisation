@@ -7,15 +7,15 @@ tic
 
 % Swarm size (must be divisible by 2 & 3 for global best and mutation
 % subsets in MOPSO)
-nPop = 12;
-maxIt = 5; % Maximum number of iterations
+nPop = 30;
+maxIt = 50; % Maximum number of iterations
 
 w = 0.3; % Intertia coeff
 c1 = 1.49; % Personal acceleration coeff
 c2 = 1.49; % Social acceleration coeff
 
 % Number of decision variables (cost function values)
-nFun = 2;
+nFun = 1;
 
 fi = maxIt; % Display Pareto Front evey fi iterations
 
@@ -29,10 +29,10 @@ if nFun == 1 % Use Single-Objective Algorithm
     wmax = 0.8;
     wmin = 0.1;
     % Max stall values before simulation ends
-    maxStall = 500;
+    maxStall = 50;
     
     % Simplest Single-Objective PSO Algorithm
-    % [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+%     [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
     
     % Smarter Single-Objective PSO Algorithm
     [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
@@ -56,8 +56,14 @@ time = toc;
 % configInputs variable required for postprocess function
 configInputs = GlobalBestPos;
 
-% Save pareto front figure and workspace in current directory
-saveas(gcf,'ParetoFront')
+% Save global best history/pareto front figure and workspace in current directory
+if nFun == 1
+    
+    saveas(gcf,'GlobalBestHistory')
+else
+    saveas(gcf,'ParetoFront')
+end
+
 save('OptimisationResults')
 
 % Use this function to create output plots/results for arbitrary configs, 

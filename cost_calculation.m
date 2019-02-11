@@ -32,14 +32,18 @@ if wing
 %         penalty 
 %     end
     
+    %% Costs, comment out multi/single as necessary
+    % Multi-objective
     cost = [1/results.Lbar,results.Cdbar] + penalty;
+    
+    % Single objective
+    cost = results.Cdbar + penalty;
     
     % If any cost less than zero, particle swarm will see it as optimal,
     % whereas none of these aerodynamic values should be less than zero
     infCon = cost < 0;
     
     cost(infCon) = inf;
-    
 else
     cost = [];
 end

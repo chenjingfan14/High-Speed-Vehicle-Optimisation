@@ -2,8 +2,8 @@ function [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMi
 %% Swarm
 
 % Maximum velocity particle can have per iteration
-varMinMat = repmat(varMin,nPop,1);
-varMaxMat = repmat(varMax,nPop,1);
+varMinMat = repmat(varMin',nPop,1);
+varMaxMat = repmat(varMax',nPop,1);
 
 varSize = [nPop nVar];
 
@@ -86,9 +86,6 @@ for it = 2:maxIt+1
         GlobalBestFit(it) = GlobalBestFit(it-1);
         GlobalBestPos(it,:) = GlobalBestPos(it-1,:);
         stall = stall+1;
-        if stall == maxStall
-            break
-        end
         wcounter = wcounter+1;
     end
     
@@ -111,7 +108,8 @@ for it = 2:maxIt+1
     
     history(it,:) = [it-1, GlobalBestFitDisp(it), stall];
     
-    if mod(it-1,fi)==0
+    if mod(it-1,fi) == 0 || stall == maxStall
+        
         figure(fcount)
         clf
         title(['Iteration: ' num2str(it-1)])
@@ -119,11 +117,20 @@ for it = 2:maxIt+1
         hold on
         xlabel('Iterations')
         ylabel('f(x)')
-        plot(1:it,GlobalBestFitDisp);
+        plot(1:it,GlobalBestFitDisp(1:it));
         hold off
         % Pause to display graph while simulation is running
         pause(0.00001)
         fcount=fcount+1;
+        
+        if stall == maxStall
+            
+            GlobalBestFit(it+1:end) = [];
+            GlobalBestPos(it+1:end,:) = [];
+            history(it+1:end,:) = [];
+            break
+        end
+        
     end
     
 end
