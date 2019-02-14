@@ -321,7 +321,7 @@ for i=1:runs
         if partType(j) == "wing" && structures
         
             wingPressure{i} = P .* -unitNorm;
-            structure(partProp, part, wingPressure{i});
+            structure3D(partProp, part, wingPressure{i});
         end
         
         %% Calculate total part aerodynamic characteristics

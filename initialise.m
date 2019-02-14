@@ -7,6 +7,7 @@ clc
 addpath(genpath('MultiSwarm'))
 addpath(genpath('VehicleGen'))
 addpath(genpath('AeroPrediction'))
+addpath(genpath('Structures'))
 
 %%
 % Number of processors to be used (up to 4 on desktop)
