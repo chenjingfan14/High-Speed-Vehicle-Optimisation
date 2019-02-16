@@ -7,15 +7,12 @@ tic
 
 % Swarm size (must be divisible by 2 & 3 for global best and mutation
 % subsets in MOPSO)
-nPop = 30;
-maxIt = 50; % Maximum number of iterations
+nPop = 120;
+maxIt = 100; % Maximum number of iterations
 
 w = 0.3; % Intertia coeff
 c1 = 1.49; % Personal acceleration coeff
 c2 = 1.49; % Social acceleration coeff
-
-% Number of decision variables (cost function values)
-nFun = 1;
 
 fi = maxIt; % Display Pareto Front evey fi iterations
 

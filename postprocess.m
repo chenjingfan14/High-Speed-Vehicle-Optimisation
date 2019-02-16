@@ -50,6 +50,9 @@ else
     sections = foilData(sectionPos);
 end
 
+semispanArray = varArray == "Semispan";
+semispan = physicalPos(:,semispanArray);
+
 count = 1;
 
 for i = nPop:-1:1
@@ -248,8 +251,12 @@ for i = nPop:-1:1
                 grid on
                 set(currentFig, 'Position', pos)
                 for k = n:-1:1
-                    plot(configSections{k}(:,1),configSections{k}(:,2))
-                    sectionLegStr(k,:) = ['Section ' num2str(k)];
+                    
+                    if k == 1 || semispan(i,k-1) > 0
+                        
+                        plot(configSections{k}(:,1),configSections{k}(:,2))
+                        sectionLegStr(k,:) = ['Section ' num2str(k)];
+                    end
                 end
                 xlabel('x')
                 ylabel('z')

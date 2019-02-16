@@ -44,7 +44,7 @@ Definition = {...
 wingDefs = {...
     "Dihedral",         5;
     "Chord",            0.8;
-    "LESweep",          40;
+    "TESweep",          0;
     "Semispan",         2;
     sectionStr,         standSec;
     "xOffset",          0;

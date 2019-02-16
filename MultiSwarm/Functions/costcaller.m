@@ -29,21 +29,29 @@ if options.Parallel
     parfor i=1:nPop
         
         % Attempt to create configuration
-        [parProperties,parPos(i,:),parameters] = particlecreator(parPos(i,:),physicalPos(i,:),varArray,sections(i,:),options);
+        [parProperties,parPos(i,:),parameters,flag] = particlecreator(parPos(i,:),physicalPos(i,:),varArray,sections(i,:),options);
         
+        if flag
+            
+            parFit(i,:) = inf;
+        else
         % End use cost function to calculate fitness
         parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
-        
+        end
     end
 else % Same as above but for single-core processing
     for i=1:nPop
         
         % Attempt to create configuration
-        [parProperties,parPos(i,:),parameters] = particlecreator(parPos(i,:),physicalPos(i,:),varArray,sections(i,:),options);
-        
+        [parProperties,parPos(i,:),parameters,flag] = particlecreator(parPos(i,:),physicalPos(i,:),varArray,sections(i,:),options);
+                
+        if flag
+            
+            parFit(i,:) = inf;
+        else
         % End use cost function to calculate fitness
         parFit(i,:) = feval(costFun,parProperties,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
-        
+        end
     end
 end
 

@@ -10,11 +10,8 @@ addpath(genpath('GeneticAlgorithm'))
 %% Main GA program (Only single-objective currently available)
 
 % nPop must be even
-nPop = 60;
-maxIt = 50; % Maximum number of iterations
-
-% Number of decision variables (cost function values)
-nFun = 1;
+nPop = 120;
+maxIt = 100; % Maximum number of iterations
 
 fi = maxIt; % Display Pareto Front evey fi iterations
 

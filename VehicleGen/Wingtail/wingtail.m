@@ -14,6 +14,7 @@ classdef wingtail
         Area
         Span
         Dihedral
+        LESweep
         MAC
         WetChord
         WetArea
@@ -30,14 +31,14 @@ classdef wingtail
     end
     
     methods
-        function obj=wingtail(dihedral,semispan,chord,sweep,sections,control)
+        function obj=wingtail(dihedral,semispan,chord,TEsweep,sections,control)
             
             % If any aerofoil section span = 0, delete all corresponding partition
             % properties
             dim = length(semispan);
             cond = semispan == 0;
             semispan(cond) = [];
-            sweep(cond) = [];
+            TEsweep(cond) = [];
             
             ind = (1:dim)+1;
             ind = ind(cond);
@@ -56,22 +57,39 @@ classdef wingtail
             nParts = sum(semispan > 0);
             nSecs = nParts + 1;
             
-            [Area,cbar] = deal(zeros(1,nParts));
-            [bh,xLE] = deal(zeros(1,nParts+1));
+            [Area,cbar,LEsweep] = deal(zeros(1,nParts));
+            [bh,xLE,xTE] = deal(zeros(1,nParts+1));
+            
+            xTE(1) = chord(1);
             
             % Is aerofoil vertical tail
             di = dihedral*pi/180;
             boolean = di == pi/2;
             
-            Lam = sweep*pi/180;
+            TEsweep = TEsweep * pi/180;
             picker = obj.Distribution;
             
-            for i=1:nParts
+            for i = 1:nParts
+                
                 bh(i+1) = bh(i) + semispan(i);
-                xLE(i+1) = xLE(i) + semispan(i)*tan(Lam(i));
+                xTE(i+1) = xTE(i) + semispan(i)*tan(TEsweep(i));
+                xLE(i+1) = xTE(i+1) - chord(i+1);
+                
+                hyp = ((xLE(i+1) - xLE(i)).^2 + (bh(i+1) - bh(i)).^2).^0.5;
+                
+                if xLE(i+1) > xLE(i) % Positive sweep calculation
+                    
+                    LEsweep(i) = acos(semispan(i)/hyp);
+                else % Negative sweep calculation
+                    
+                    LEsweep(i) = -(pi/2 - asin(semispan(i)/hyp));
+                end
+                
                 Area(i) = 0.5*(chord(i+1) + chord(i)) * semispan(i);
                 Taper = chord(i+1)/chord(i);
+                
                 if Taper == inf
+                    
                     Taper = 0;
                 end
                 cbar(i) = (2/3)*chord(i)*((1 + Taper + (Taper^2))/(1 + Taper));
@@ -214,6 +232,7 @@ classdef wingtail
             obj.MAC = cbar;
             obj.WetMAC = cbar;
             obj.Dihedral = di;
+            obj.LESweep = LEsweep * 180/pi;
             obj.xNorm = xNorm;
             obj.Points = points;
             obj.Partitions = nParts;

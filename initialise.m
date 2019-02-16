@@ -14,6 +14,8 @@ addpath(genpath('Structures'))
 nProc = 1;
 costFun = @aeroprediction; % Cost function caller
 options = simOptions(nProc);
+% Number of decision variables (cost function values)
+nFun = options.CostFunctions;
 
 wing = options.Wing;
 aft = options.Aft;

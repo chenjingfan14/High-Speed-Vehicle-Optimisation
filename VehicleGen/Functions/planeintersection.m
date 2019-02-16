@@ -12,6 +12,7 @@ N = -(n(:,1).*w(:,1) + n(:,2).*w(:,2) + n(:,3).*w(:,3));
 sI = N ./ D;
 I = P0 + sI*u;
 
+
 yBody = yzBody(:,1);
 zBody = yzBody(:,2);
 
@@ -19,19 +20,22 @@ conx = I(:,1) >= xBody(1) & I(:,1) <= xBody(2) | I(:,1) >= xBody(2) & I(:,1) <= 
 cony = I(:,2) >= yBody(j) & I(:,2) <= yBody(j+1) | I(:,2) >= yBody(j+1) & I(:,2) <= yBody(j);
 conz = I(:,3) >= zBody(j) & I(:,3) <= zBody(j+1) | I(:,3) >= zBody(j+1) & I(:,3) <= zBody(j);
 
-inter = I(conx & cony & conz,:);
+winner = conx & cony & conz;
 
-% Sometimes needs to be rounded, so if first attempt returns empty, round
-if isempty(inter)
-    
-    I = round(I,10);
-    
-    conx = I(:,1) >= xBody(1) & I(:,1) <= xBody(2) | I(:,1) >= xBody(2) & I(:,1) <= xBody(1);
-    cony = I(:,2) >= yBody(j) & I(:,2) <= yBody(j+1) | I(:,2) >= yBody(j+1) & I(:,2) <= yBody(j);
-    conz = I(:,3) >= zBody(j) & I(:,3) <= zBody(j+1) | I(:,3) >= zBody(j+1) & I(:,3) <= zBody(j);
+inter = I(winner,:);
 
-    inter = I(conx & cony & conz,:);
-end
+% Sometimes needs to be rounded to find intersection
+I = round(I,10);
+
+conx = I(:,1) >= xBody(1) & I(:,1) <= xBody(2) | I(:,1) >= xBody(2) & I(:,1) <= xBody(1);
+cony = I(:,2) >= yBody(j) & I(:,2) <= yBody(j+1) | I(:,2) >= yBody(j+1) & I(:,2) <= yBody(j);
+conz = I(:,3) >= zBody(j) & I(:,3) <= zBody(j+1) | I(:,3) >= zBody(j+1) & I(:,3) <= zBody(j);
+
+winner2 = conx & cony & conz;
+
+% Don't want repeated intersection points so ignore any intersections that
+% have already been picked up
+inter = [inter; I(winner2 & ~winner,:)];
 
 if isempty(inter)
 
@@ -74,8 +78,8 @@ else
     between = (inter(:,1) >= P0(1) & inter(:,1) <= P1(1)) | (inter(:,1) >= P1(1) & inter(:,1) <= P0(1));
     
     if between
-        % Ensure only one intersection is returned
-        intersection = inter(between(1),:);
+        
+        intersection = inter(between,:);
     else
         % Increase semispan
         reason = 5;

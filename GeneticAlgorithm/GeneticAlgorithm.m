@@ -32,7 +32,7 @@ GlobalBestFitDisp(:,inv) = inv(:,inv)./GlobalBestFitDisp(:,inv);
 
 history(1,:) = [1, GlobalBestFitDisp(1,:), 0];
 
-fitnessBar = mean(popFitness,1);
+fitnessBar = mean(popFitness(popFitness < inf),1);
 fprintf('Iteration %i: Global Best: %3.4f Mean: %3.4f Stall: %i \n', 0, GlobalBestFitDisp(1,:), fitnessBar, 0);
 
 stall = 0;
@@ -80,7 +80,7 @@ for it = 2 : maxIt + 1
         stall = stall+1;
     end
     
-    fitnessBar = mean(popFitness,1);
+    fitnessBar = mean(popFitness(popFitness < inf),1);
     fprintf('Iteration %i: Global Best: %3.4f Mean: %3.4f Stall: %i \n', it-1, GlobalBestFitDisp(it), fitnessBar, stall);
     
     history(it,:) = [it-1, GlobalBestFitDisp(it), stall];

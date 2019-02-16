@@ -1,4 +1,4 @@
-function [assemblyProperties,parPos,parameters] = particlecreator(parPos,configPos,varArray,sections,options)
+function [assemblyProperties,parPos,parameters,flag] = particlecreator(parPos,configPos,varArray,sections,options)
 %% Assembles arbitrary configuration
 % Will fuse together multiple aerofoil sections with body. Will also work
 % for aerofoil alone or body alone configurations
@@ -9,6 +9,8 @@ Fore = options.Fore;
 Nose = options.Nose;
 Control = options.Control;
 Structure = options.Structure;
+
+flag = false;
 
 %% Create body
 % Check if body is part of configuration, if so build it, if not set body
@@ -33,13 +35,20 @@ if Aft
     % Create aft body portion of body
     aftbody = arbitraryfuse([aftbodyGeom,aftBodyLength],noseForeLength);
     
+    aftbodyHeight = aftbody.Height;
+    aftbodyWidth = aftbody.Width;
+    
     parameters.ForeL = noseForeLength;
     parameters.AftL = aftBodyLength;
     parameters.BodyL = noseForeLength + aftBodyLength;
-    parameters.BodyW = aftbody.Width;
-    parameters.BodyH = aftbody.Height;
+    parameters.BodyW = aftbodyHeight;
+    parameters.BodyH = aftbodyWidth;
     
 else % Set all body parts to empty
+    
+    aftbodyHeight = 0;
+    aftbodyWidth = 0;
+    
     aftbody = ''; forebody = ''; Nose = '';
 end
 
@@ -56,7 +65,7 @@ for i=wingDim:-1:1
     
     dihedralVar = varArray == "Dihedral";
     chordVar = varArray == "Chord";
-    sweepVar = varArray == "LESweep";
+    TEsweepVar = varArray == "TESweep";
     semispanVar = varArray == "Semispan";
     xOffsetVar = varArray == "xOffset";
     zOffsetVar = varArray == "zOffset";
@@ -64,7 +73,7 @@ for i=wingDim:-1:1
     % Assign variables to their physical attribute
     dihedral = configPos(dihedralVar);
     chord = configPos(chordVar);
-    sweep = configPos(sweepVar);
+    TEsweep = configPos(TEsweepVar);
     semispan = configPos(semispanVar);
     xOffset = configPos(xOffsetVar);
     zOffset = configPos(zOffsetVar);
@@ -73,24 +82,25 @@ for i=wingDim:-1:1
     % configuration cannot be created
     parDihedral = parPos(dihedralVar);
     parChord = parPos(chordVar);
-    parSweep = parPos(sweepVar);
+    parTESweep = parPos(TEsweepVar);
     parSemispan = parPos(semispanVar);
     parxOffset = parPos(xOffsetVar);
     parzOffset = parPos(zOffsetVar);
     
-    % If first semispan = 0, give starting value so that wing can be
-    % created
-    if semispan(1) == 0
-        semispan(1) = 0.1;
-        parSemispan(1) = 0.1;
+    % Ensure initial semispan is larger than maximum body radius
+    minFirstSemispan = max([aftbodyHeight,aftbodyWidth]/2);
+    
+    if semispan(1) < minFirstSemispan
+        
+        [semispan(1),parSemispan(1)] = deal(minFirstSemispan);
     end
     
     % Create aerofoil
     if Control
 %         control = configPos(varArray == ");
-        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
+        liftSurface(i) = wingtail(dihedral,semispan,chord,TEsweep,sections,control);
     else 
-        liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
+        liftSurface(i) = wingtail(dihedral,semispan,chord,TEsweep,sections);
     end
         
     if Aft
@@ -135,36 +145,11 @@ for i=wingDim:-1:1
             
             % If history of failure reasons is filled, and loop is bouncing
             % between reasons, and loop hasn't reduced fixFactor recently: 
-            % reduce fixFactor & reset stayOut EDIT: Trying to reduce chord
-            % instead
+            % reduce fixFactor & reset stayOut
             if attempt > nHist && bouncing && stayOut >= 0
-                
-%                 chord(1) = chord(1) - 0.1*chord(1);
-%                 parChord(1) = parChord(1) - 0.1*parChord(1);
-%                 
-%                 if Control
-%                     liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
-%                 else
-%                     liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
-%                 end
                 
                 fixFactor = fixFactor/2;
                 stayOut = -nHist;
-            end
-            
-            % Sometimes straight unswept untapered wings cause issues
-            % when merging, so ensure first partition sweep is non-zero
-            if sweep(1) < 1
-                
-                sweep(1) = 1;
-            end
-            
-            % Chord may get too low in "last resort" method, if so make all
-            % chord values equal to half the aftbody length
-            if chord(1) < 1
-                
-                chord(:) = parameters.AftL/2;
-                parChord(:) = 0.5;
             end
             
             if isempty(reason)
@@ -213,41 +198,24 @@ for i=wingDim:-1:1
                         
                     case 5 % Increase semispan
                         
-                        semispan(1) = semispan(1) + 0.5*semispan(1);
-                        parSemispan(1) = parSemispan(1) + 0.5*parSemispan(1);
+                        semispan(1) = semispan(1) + 0.1 * semispan(1);
+                        parSemispan(1) = parSemispan(1) + 0.1 * parSemispan(1);
                             
                         if Control
-                            liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
+                            liftSurface(i) = wingtail(dihedral,semispan,chord,TEsweep,sections,control);
                         else
-                            liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
+                            liftSurface(i) = wingtail(dihedral,semispan,chord,TEsweep,sections);
                         end
                 end
                 
             else
                 
-                % If too many attempts already, last resort reduce chord
-                
-                % Alter physical chord to be created, and particle chord to
-                % be fed back to optimiser
-                chord(1) = chord(1) - 0.1*chord(1);
-                parChord(1) = parChord(1) - 0.1*parChord(1);
-                
-                % Sometimes straight unswept untapered wings cause issues
-                % when merging, so ensure taper ratio is slightly < 1
-                for j = 2:numel(chord)
-                    if chord(j) >= chord(j-1)
-                        chord(j) = 0.99*chord(j-1);
-                        parChord(j) = 0.99*parChord(j-1);
-                    end
-                end
-                
-                % Re-create aerofoil
-                if Control
-                    liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections,control);
-                else
-                    liftSurface(i) = wingtail(dihedral,semispan,chord,sweep,sections);
-                end
-                
+                % If wing cannot be combined with body, quit and give inf
+                % values to cost functions
+                flag = true;
+                assemblyProperties = [];
+                parameters = [];
+                return
             end
             
             % Re-try merge
@@ -260,12 +228,6 @@ for i=wingDim:-1:1
             % Shift current reason down one in the history array to make 
             % room for new reason
             reasonHistory = circshift(reasonHistory,1);
-            
-            % Use to debug if configuration cannot be assembled
-            if attempt > 90
-               attempt
-            end
-            
         end
         
         %%
@@ -277,14 +239,14 @@ for i=wingDim:-1:1
             parPos(dihedralVar) = parDihedral;
             parPos(semispanVar) = parSemispan;
             parPos(chordVar) = parChord;
-            parPos(sweepVar) = parSweep;
+            parPos(TEsweepVar) = parTESweep;
             parPos(xOffsetVar) = parxOffset;
             parPos(zOffsetVar) = parzOffset;
-
+            
             configPos(dihedralVar) = dihedral;
             configPos(semispanVar) = semispan;
             configPos(chordVar) = chord;
-            configPos(sweepVar) = sweep;
+            configPos(TEsweepVar) = TEsweep;
             configPos(xOffsetVar) = xOffset;
             configPos(zOffsetVar) = zOffset;
         end
@@ -310,7 +272,6 @@ if Wing
     
     parameters.Chord = chord;
     parameters.Semispan = semispan;
-    parameters.Sweep = sweep;
     parameters.Dihedral = dihedral;
     
     if Control
@@ -325,6 +286,7 @@ if Wing
     parameters.MAC = sum(wing.Area.*wing.MAC)/sumArea;
     parameters.Aref = sumArea*2;
     parameters.Wingspan = sum(wing.Span);
+    parameters.Sweep = wing.LESweep;
     
 else
     
@@ -338,7 +300,7 @@ end
 
 if Fore
     
-        % Find radial aft body points for fore body interpolation
+    % Find radial aft body points for fore body interpolation
     % size-1 for panel based over
     radial = radialpoints(aftbody.Points);
     [dim_f,~] = size(radial);

@@ -36,7 +36,7 @@ GlobalBestFitDisp = GlobalBestFit;
 GlobalBestFitDisp(:,inv) = inv(:,inv)./GlobalBestFitDisp(:,inv);
 
 % Print iteration, mean for every fitness function
-parFitBar = mean(parFitDisp,1);
+parFitBar = mean(parFitDisp(parFitDisp < inf),1);
 fprintf('Iteration 0: Global Best: %3.4f Mean: %3.4f Stall: 0 \n', GlobalBestFitDisp(1), parFitBar);
 
 history(1,:) = [0, GlobalBestFitDisp(1), 0];
@@ -103,7 +103,7 @@ for it = 2:maxIt+1
     GlobalBestFitDisp = GlobalBestFit;
     GlobalBestFitDisp(:,inv) = inv(:,inv)./GlobalBestFitDisp(:,inv);
     
-    parFitBar = mean(parFitDisp,1);
+    parFitBar = mean(parFitDisp(parFitDisp < inf),1);
     fprintf('Iteration %i: Global Best: %3.4f Mean: %3.4f Stall: %i \n', it-1, GlobalBestFitDisp(it), parFitBar, stall);
     
     history(it,:) = [it-1, GlobalBestFitDisp(it), stall];

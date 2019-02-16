@@ -10,7 +10,6 @@ runs = flow.Runs;
 % Configuration reference parameters
 Aref = parameters.Aref;
 MAC = parameters.MAC;
-wingspan = parameters.Wingspan;
 
 % Takes section properties and outputs point matrices, number of parts,
 % whether part is part of body, and prediction methods to be used for every
@@ -432,4 +431,4 @@ results.copBar = copBar;
 %% Translate aerodynamic characteristics to cost function values
 % Usually non-dimensionalised
 
-cost = cost_calculation(results,options);
+cost = cost_calculation(results,parameters,options);

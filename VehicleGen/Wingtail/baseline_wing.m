@@ -4,7 +4,7 @@ function wingDefs = baseline_wing()
 wingDefs = {...
     "Dihedral",     4;
     "Chord",       [13.85, 4.387, 1.5241];
-    "LESweep",     [80, 45];
+    "TESweep",     [-5, -5];
     "Semispan",    [0.744+0.88, 2.62686];           
     "Section",     ["FSPLStrake.dat", "FSPLND.dat", "FSPLND.dat"];
     "xOffset",     -3.5;

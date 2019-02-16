@@ -1,10 +1,11 @@
-function cost = cost_calculation(results,options)
+function cost = cost_calculation(results,parameters,options)
 
+nFun = options.CostFunctions;
 wing = options.Wing;
 baseline = options.Baseline;
 
 if wing
-
+    
     % lift = Lbar/wingspan;
     % moment = Mbar/wingspan;
     
@@ -16,9 +17,9 @@ if wing
         base = options.Base;
         baseResults = options.Base.Results;
         
-        constrain = [results.Mbar,results.copBar,results.Lbar];
-        minVal = [0,0,baseResults.Lbar];
-        maxVal = [baseResults.Mbar,baseResults.copBar,inf];
+        constrain = [min(parameters.Sweep),results.Mbar,results.copBar,results.Lbar];
+        minVal = [0,0,0,baseResults.Lbar];
+        maxVal = [80,baseResults.Mbar,baseResults.copBar,inf];
     else
         constrain = [results.Mbar,results.copBar];
         minVal = [0,0];
@@ -28,16 +29,27 @@ if wing
     penalty = violation(constrain,minVal,maxVal);
     
     % Check magnitude of penalty
-%     if any(penalty)
-%         penalty 
-%     end
+    %     if any(penalty)
+    %         penalty
+    %     end
     
-    %% Costs, comment out multi/single as necessary
-    % Multi-objective
-    cost = [1/results.Lbar,results.Cdbar] + penalty;
+    %% Costs
+    % Varies automatically depending on number of cost functions defined in
+    % simOptions
     
-    % Single objective
-    cost = results.Cdbar + penalty;
+    if nFun == 2
+        
+        % Multi-objective
+        cost = [1/results.Lbar,results.Cdbar] + penalty;
+        
+    elseif nFun == 1
+        
+        % Single objective
+        cost = results.Cdbar/results.Clbar + penalty;
+        
+    else
+        error(['No option for ' num2str(nFun) ' cost functions'])
+    end
     
     % If any cost less than zero, particle swarm will see it as optimal,
     % whereas none of these aerodynamic values should be less than zero

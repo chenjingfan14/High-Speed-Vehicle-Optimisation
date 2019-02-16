@@ -1,6 +1,9 @@
 function options = simOptions(nProc)
 %% Include and Optimise what
 
+% Number of cost functions
+nFun = 1;
+
 wing = true;
 aft = true;
 fore = true;
@@ -29,6 +32,7 @@ else % Running on one processor
     options.Parallel = false;
 end
 
+options.CostFunctions = nFun;
 options.Wing = wing;
 options.Aft = aft;
 options.Fore = fore;

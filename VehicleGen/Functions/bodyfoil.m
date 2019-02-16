@@ -89,11 +89,22 @@ for i=1:numAerofoils
     
     % Calculate bridge points ie. point on body where aerofoil joins
     for ii=1:fRow
-        interiorPoint = interiorPoints(ii,:);
-        exteriorPoint = exteriorPoints(ii,:);
+        inPoint = interiorPoints(ii,:);
+        exPoint = exteriorPoints(ii,:);
         
-        [inter,reason] = planeintersection(norm(j,:),innerBodyPoints,interiorPoint,exteriorPoint,xBody,yzBody,j);
-        if isempty(inter)
+        [inter,reason] = planeintersection(norm(j,:),innerBodyPoints,inPoint,exPoint,xBody,yzBody,j);
+        
+        if size(inter,1) > 1
+            % If more than one bridge point found, pick the one which is
+            % furthest outboard (yz plane) from the inner point
+        
+            yzInterMag = ((inter(:,2) - inPoint(2)).^2 + (inter(:,3) - inPoint(3)).^2).^0.5;
+            
+            [~,ID] = max(yzInterMag);
+            inter = inter(ID,:);
+        
+        elseif isempty(inter)
+            % Failed to merge wing-body
             
             % Check what failed config looks like
 %             aerofoil.Points = foil;
@@ -102,10 +113,12 @@ for i=1:numAerofoils
             success = false;
             return
         end
+        
         bridge(ii,:) = inter;
     end
     
     if bool
+        
         bridgeLower = reshape(bridge,[],1,3);
         bridgeUpper = zeros(fRow,1,3);
     else
