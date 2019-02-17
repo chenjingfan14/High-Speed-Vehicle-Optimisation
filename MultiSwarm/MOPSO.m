@@ -263,14 +263,22 @@ for it = 2:maxIt+1
     
     history(it,:) = [it-1, nonDomFitBar, nNonDomParticles];
     
-    if mod(it-1,fi)==0
+    if mod(it-1,fi) == 0
+        
+        if options.Baseline
+            
+            baselineCost = options.Base.Results.Cost;
+        else
+            baselineCost = zeros(1,nFun);
+        end
+            
         % Have max limits slightly above that of PF so that points are not
         % lying on the edges
-        maxf = max(nonDomFitDisp,[],1)*1.2;
-        minf = min(nonDomFitDisp,[],1);
+        maxf = max([nonDomFitDisp; baselineCost] ,[],1)*1.2;
+        minf = min([nonDomFitDisp; baselineCost] ,[],1);
         figure(fcount)
         clf
-        title(['Iteration: ' num2str(it-1)])
+        title(['Pareto Front (Iteration: ' num2str(it-1) ')'])
         set(gcf, 'Position', [0, 0, 1920, 1200])
         hold on
         xlabel('1/L')
@@ -283,48 +291,55 @@ for it = 2:maxIt+1
             minf = minf(1:3);
         end
             
-        for i=1:plotFun
+        for i = 1:plotFun
             if inv(i) == 0
                 limits(i,:) = [min(0,minf(i)), maxf(i)];
             else
                 limits(i,:) = [minf(i), maxf(i)];
             end
         end
+        
         xlim(limits(1,:))
         ylim(limits(2,:))
+        
         if nFun == 2
-            % Plots initial PF, may be too large to show on graph due to
-            % penalty functions implemented
-            % plot(initPFDisp(:,1), initPFDisp(:,2),'b*');
-            plot(parFitDisp(:,1), parFitDisp(:,2),'k*');
-            plot(nonDomFitDisp(:,1), nonDomFitDisp(:,2),'r*');
+
+            plot(baselineCost(:,1), baselineCost(:,2),'ko');
+            % plot(parFitDisp(:,1), parFitDisp(:,2),'k*');
+            plot(nonDomFitDisp(:,1), nonDomFitDisp(:,2),'kx');
         else
-            % plot3(initPFDisp(:,1), initPFDisp(:,2), initPFDisp(:,3),'b*');
-            plot3(parFitDisp(:,1), parFitDisp(:,2), parFitDisp(:,3),'k*');
-            plot3(nonDomFitDisp(:,1), nonDomFitDisp(:,2), nonDomFitDisp(:,3),'r*');
+            plot3(baselineCost(:,1), baselineCost(:,2), baselineCost(:,3),'ko');
+            % plot3(parFitDisp(:,1), parFitDisp(:,2), parFitDisp(:,3),'k*');
+            plot3(nonDomFitDisp(:,1), nonDomFitDisp(:,2), nonDomFitDisp(:,3),'kx');
             zlim(limits(3,:))
             zlabel('M')
         end
+        
+        legend('Baseline', 'Optimal Design')
         hold off
         % Pause to display graph while simulation is running
         pause(0.00001)
-        fcount = fcount+1;
+        fcount = fcount + 1;
     end
     
     % Stops simulation if any Pareto Front values are not numeric 
     if any(any(isnan(nonDomFit)))
-        return
+        
+        error('Non-dominated particle(s) cost function value(s) non-numeric')
     end
 end
 
 %% Ordering for output
 % Ordered with respect to fitness function 1, then 2, etc
 num = (1:length(parsDominated))';
+
 if nFun == 2
+    
     fsort = sortrows([num, nonDomFit],2,'descend');
 else
     fsort = sortrows([num, nonDomFit],[2 3],{'descend' 'descend'});
 end
+
 nonDomFit = nonDomFit(fsort(num,1),:);
 nonDomPos = nonDomPos(fsort(num,1),:);
 

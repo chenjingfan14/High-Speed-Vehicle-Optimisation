@@ -20,10 +20,6 @@ popGene = unifrnd(varMinMat,varMaxMat,varSize);
 
 [popFitness,popGene] = costcaller(costFun,nPop,nFun,popGene,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 
-% for i = 1 : M
-%     population.Chromosomes(i).fitness = Problem.obj( population.Chromosomes(i).Gene(:) );
-% end
-
 [GlobalBestFit(1),bestID] = min(popFitness);
 GlobalBestPos(1,:) = popGene(bestID,:);
 
@@ -85,20 +81,29 @@ for it = 2 : maxIt + 1
     
     history(it,:) = [it-1, GlobalBestFitDisp(it), stall];
     
-    if mod(it-1,fi)==0 || stall == maxStall
+    if mod(it-1,fi) == 0 || stall == maxStall
+        
+        if options.Baseline
+            
+            baselineCost = options.Base.Results.Cost;
+        else
+            baselineCost = zeros(1,nFun);
+        end
         
         figure(fcount)
         clf
-        title(['Iteration: ' num2str(it-1)])
+        title(['Cost Function Time History (Iteration: ' num2str(it-1) ')'])
         set(gcf, 'Position', [0, 0, 1920, 1200])
         hold on
         xlabel('Iterations')
         ylabel('f(x)')
-        plot(1:it,GlobalBestFitDisp(1:it));
+        plot(it-1 ,baselineCost,'kx');
+        plot(0:it-1 ,GlobalBestFitDisp(1:it),'k');
+        legend('Baseline', 'Optimal Design')
         hold off
         % Pause to display graph while simulation is running
         pause(0.00001)
-        fcount=fcount+1;
+        fcount = fcount+1;
         
         if stall == maxStall
             

@@ -429,6 +429,6 @@ results.Dbar = Dbar;
 results.copBar = copBar;
 
 %% Translate aerodynamic characteristics to cost function values
-% Usually non-dimensionalised
-
 cost = cost_calculation(results,parameters,options);
+
+results.Cost = cost;

@@ -1,27 +1,33 @@
-function flow = flowparameters(options,alpha,Mach,alt,delta)
+function flow = flowparameters(options)
 %% Flow conditions for all flight states
 
+inputs = options.Flow;
+
+alpha = inputs.Alpha;
+Mach = inputs.Mach;
+alt = inputs.Altitude;
+delta = inputs.Delta;
 control = options.Control;
 
 %% Check if inputs have been provided
 % If so, bypass. If not, give pre-determined values
-if nargin > 1 && ~isempty(alpha)
-else
+if isempty(alpha)
+
     alpha = (-4:4:24)';
 end
 
-if nargin > 2 && ~isempty(Mach)
-else
+if isempty(Mach)
+
     Mach = [4.63]';
 end
 
-if nargin > 3 && ~isempty(alt)
-else
+if isempty(alt)
+
     alt = [32850]';
 end
 
-if nargin > 4 && ~isempty(delta)
-else
+if options.Control && isempty(delta)
+
     delta = [0]';
 end
 

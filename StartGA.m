@@ -22,9 +22,9 @@ inv = false;
 maxStall = 50;
 
 % Controling paramters of the GA algortihm
-Pc = 0.95;         % Probablility of crossover
-Pm = 1/nVar;        % Probability of mutation 
-Er = 0.2;          % Elitism ratio 
+Pc = 0.95;      % Probablility of crossover
+Pm = 1/nVar;    % Probability of mutation 
+Er = 0.2;       % Elitism ratio 
 
 [GlobalBestFit,GlobalBestPos,history] = GeneticAlgorithm(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,Pc,Pm,Er,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 

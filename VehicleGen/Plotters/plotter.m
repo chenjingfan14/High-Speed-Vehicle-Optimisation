@@ -6,7 +6,9 @@ conArray = 1:nCons;
 plotDefs = repmat("",nCons,1);
 
 for i = 1:nCons
+    
     if isnumeric(varargin{i})
+        
         plotDefs(i) = num2str(varargin{i});
     else
         plotDefs(i) = varargin(i);
@@ -18,7 +20,6 @@ pos = figureposition();
 figure
 
 currentFig = gcf;
-figNum = currentFig.Number;
 
 hold on
 set(currentFig, 'Position', pos)
@@ -50,13 +51,6 @@ for ii=1:nPoints
     y = points(:,:,2);
     z = points(:,:,3);
     
-    [~,dim2] = size(points);
-    dim3 = dim2 - 3;
-    
-    X = 1:3:dim3;
-    Y = X + 1;
-    Z = Y + 1;
-    
     %%
     if any(plotDefs == "impact")
         
@@ -64,8 +58,8 @@ for ii=1:nPoints
         xyz = part.xyz;
         [x,y] = size(centre);
         
-        for i=1:x
-            for j=1:3:y
+        for i = 1:x
+            for j = 1:3:y
                 
                 p = [xyz(i:i+1,j:j+2); xyz(i+1:-1:i,j+3:j+5)];
                 
@@ -151,7 +145,8 @@ for ii=1:nPoints
         
         [row,col] = size(nx);
         
-        for i = 1:row*col
+        for i = 1:row * col
+            
             plot3([0 nx(i)/10]+cx(i),[0 ny(i)/10]+cy(i),[0 nz(i)/10]+cz(i),'r')
             plot3([0 unitTx(i)/10]+cx(i),[0 unitTy(i)/10]+cy(i),[0 unitTz(i)/10]+cz(i),'b')
             plot3([0 unitSx(i)/10]+cx(i),[0 unitSy(i)/10]+cy(i),[0 unitSz(i)/10]+cz(i),'g')

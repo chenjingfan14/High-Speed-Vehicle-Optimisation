@@ -24,7 +24,7 @@ atOnce = 5;
 %%
 [nPop,~] = size(configInputs);
 
-if (exist('isDirect','var') && isDirect)
+if exist('isDirect','var') && isDirect
     
     disp('Variables assumed to be actual configuration measurements')
     physicalPos = configInputs;
@@ -55,16 +55,14 @@ semispan = physicalPos(:,semispanArray);
 
 count = 1;
 
-for i = nPop:-1:1
+if baseline
     
-    configSections = sections(i,:);
+    base = options.Base;
     
-    % Create configuration
-    [configProperties,configInputs(i,:),configParameters] = particlecreator(configInputs(i,:),physicalPos(i,:),varArray,configSections,options);
-    % Analyse configuration and plot
-    [~,configResults] = aeroprediction(configProperties,flow,configParameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    baselinefun(variCons,flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer,true);
     
-    points = flowfinder(configProperties);
+    configResults = base.Results;
+    configSections = base.Sections;
     
     Cl = configResults.Cl;
     Cd = configResults.Cd;
@@ -87,16 +85,14 @@ for i = nPop:-1:1
     
     order = flow.PlotOrder;
     
-    formatSpec = 'Configuration %i';
-    configStr = sprintf(formatSpec,i);
-    
-    plotter(points,"title",configStr)
+    configStr = 'Baseline Configuration';
     
     for ii = 1:numel(what)
         
         str = what(ii);
         
         for j = legDim:-1:1
+            
             legStr(j,:) = string([char(order(2)) ' = ' num2str(secondDim(j))]);
         end
         
@@ -105,6 +101,7 @@ for i = nPop:-1:1
             titleStr = configStr;
             
             for k = 1:size(thirdDim,2)
+                
                 titleStr = [titleStr ' ' char(order(k+2)) ' = ' num2str(thirdDim(j,k))];
             end
             
@@ -250,12 +247,258 @@ for i = nPop:-1:1
                 hold on
                 grid on
                 set(currentFig, 'Position', pos)
+                
+                for k = length(configSections):-1:1
+                        
+                    plot(configSections{k}(:,1),configSections{k}(:,2))
+                    sectionLegStr(k,:) = ['Section ' num2str(k)];
+                end
+                
+                xlabel('x')
+                ylabel('z')
+                title([configStr ' Aerofoil Sections (Root Chord = Section 1)'])
+                legend(sectionLegStr)
+                hold off
+                
+                clear sectionLegStr
+            end
+            
+%             if contains(string,"body Cp")
+%                 % Plots Cp at every radial location of body
+%                 % Produces hundreds of figures so leave commented during simulations
+%                 for ii=1:dim
+%                     
+%                     meanRadLoc = mean(bodyRadLoc{ii},1);
+%                     
+%                     [chordPanels,spanPanels] = size(bodyCp{ii});
+%                     x = 0:1/(chordPanels-1):1;
+%                     for jj=1:spanPanels
+%                         
+%                         location = round(meanRadLoc(jj),1);
+%                         
+%                         figure
+%                         hold on
+%                         grid on
+%                         title(['Body chordwise pressure coefficient at ' num2str(location) '^o'] );
+%                         plot(x,bodyCp{ii}(:,jj))
+%                         xlabel('x')
+%                         ylabel('Cp')
+%                     end
+%                 end
+%             end
+        end
+    end
+end
+
+for i = nPop:-1:1
+    
+    configSections = sections(i,:);
+    
+    % Create configuration
+    [configProperties,configInputs(i,:),configParameters] = particlecreator(configInputs(i,:),physicalPos(i,:),varArray,configSections,options);
+    % Analyse configuration and plot
+    [~,configResults] = aeroprediction(configProperties,flow,configParameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    
+    points = flowfinder(configProperties);
+    
+    Cl = configResults.Cl;
+    Cd = configResults.Cd;
+    Cm = configResults.Cm;
+    CN = configResults.CN;
+    CA = configResults.CA;
+    rootMoment = configResults.RootMoment;
+    L = configResults.Lift;
+    D = configResults.Drag;
+    
+    %% Plot desired characteristics for all flight states
+    
+    flowCons = flow.FlightStates;
+    
+    legDim = flow.Dim(2);
+    graphs = flow.Dim(3);
+    firstDim = unique(flowCons(:,1));
+    secondDim = unique(flowCons(:,2));
+    thirdDim = unique(flowCons(:,3:end),'stable','rows');
+    
+    order = flow.PlotOrder;
+    
+    formatSpec = 'Configuration %i';
+    configStr = sprintf(formatSpec,i);
+    
+    plotter(points,"title",configStr)
+    
+    for ii = 1:numel(what)
+        
+        str = what(ii);
+        
+        for j = legDim:-1:1
+            
+            legStr(j,:) = string([char(order(2)) ' = ' num2str(secondDim(j))]);
+        end
+        
+        for j = 1:graphs
+            
+            titleStr = configStr;
+            
+            for k = 1:size(thirdDim,2)
+                
+                titleStr = [titleStr ' ' char(order(k+2)) ' = ' num2str(thirdDim(j,k))];
+            end
+            
+            if contains(str,"CN")
+                pos = figureposition();
+                figure
+                currentFig = gcf;
+                hold on
+                grid on
+                set(currentFig, 'Position', pos)
+                plot(firstDim,CN(:,:,j))
+                xlabel(order(1))
+                ylabel('C_N')
+                title(titleStr)
+                legend(legStr)
+                hold off
+            end
+            
+            if contains(str,"CA")
+                pos = figureposition();
+                figure
+                currentFig = gcf;
+                hold on
+                grid on
+                set(currentFig, 'Position', pos)
+                plot(firstDim,CA(:,:,j))
+                xlabel(order(1))
+                ylabel('C_A')
+                title(titleStr)
+                legend(legStr)
+                hold off
+            end
+            
+            if contains(str,"Cm")
+                pos = figureposition();
+                figure
+                currentFig = gcf;
+                hold on
+                grid on
+                set(currentFig, 'Position', pos)
+                plot(firstDim,Cm(:,:,j))
+                xlabel(order(1))
+                ylabel('C_m')
+                title(titleStr)
+                legend(legStr)
+                hold off
+            end
+            
+            if contains(str,"Cl")
+                pos = figureposition();
+                figure
+                currentFig = gcf;
+                hold on
+                grid on
+                set(currentFig, 'Position', pos)
+                plot(firstDim,Cl(:,:,j))
+                xlabel(order(1))
+                ylabel('C_L')
+                title(titleStr)
+                legend(legStr)
+                hold off
+            end
+            
+            if contains(str,"Cd")
+                pos = figureposition();
+                figure
+                currentFig = gcf;
+                hold on
+                grid on
+                set(currentFig, 'Position', pos)
+                plot(firstDim,Cd(:,:,j))
+                xlabel(order(1))
+                ylabel('C_D')
+                title(titleStr)
+                legend(legStr)
+                hold off
+            end
+            
+            if contains(str,"Cl_Cd")
+                pos = figureposition();
+                figure
+                currentFig = gcf;
+                hold on
+                grid on
+                set(currentFig, 'Position', pos)
+                plot(Cd(:,:,j),Cl(:,:,j))
+                xlabel('C_D')
+                ylabel('C_L')
+                title(titleStr)
+                legend(legStr)
+                hold off
+            end
+            
+            if contains(str,"L")
+                pos = figureposition();
+                figure
+                currentFig = gcf;
+                hold on
+                grid on
+                set(currentFig, 'Position', pos)
+                plot(firstDim,L(:,:,j))
+                xlabel(order(1))
+                ylabel('Lift (N)')
+                title(titleStr)
+                legend(legStr)
+                hold off
+            end
+            
+            if contains(str,"D")
+                pos = figureposition();
+                figure
+                currentFig = gcf;
+                hold on
+                grid on
+                set(currentFig, 'Position', pos)
+                plot(firstDim,D(:,:,j))
+                xlabel(order(1))
+                ylabel('Drag (N)')
+                title(titleStr)
+                legend(legStr)
+                hold off
+            end
+            
+            if contains(str,"M")
+                pos = figureposition();
+                figure
+                currentFig = gcf;
+                hold on
+                grid on
+                set(currentFig, 'Position', pos)
+                plot(firstDim,rootMoment(:,:,j))
+                xlabel(order(1))
+                ylabel('Root Bending Moment (Nm)')
+                title(titleStr)
+                legend(legStr)
+                hold off
+            end
+            
+            if contains(str,"Aerofoils")
+                pos = figureposition();
+                figure
+                currentFig = gcf;
+                hold on
+                grid on
+                set(currentFig, 'Position', pos)
+                
                 for k = n:-1:1
                     
                     if k == 1 || semispan(i,k-1) > 0
                         
                         plot(configSections{k}(:,1),configSections{k}(:,2))
                         sectionLegStr(k,:) = ['Section ' num2str(k)];
+                    
+                    elseif i ~= nPop && size(sectionLegStr,1) >= k
+                        
+                        sectionLegStr(k:end,:) = [];
+                        
                     end
                 end
                 xlabel('x')

@@ -1,4 +1,4 @@
-function [Base] = baselinefun(variCons,flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer)
+function [Base] = baselinefun(variCons,flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer,display)
 %% Baseline configuration to be improved upon (currently X-34)
 
 % X-34 build uses pre-defined aerofoil sections so set Bezier to false
@@ -89,6 +89,7 @@ Base.VarArray = varArray;
 Base.Variables = baseVar;
 Base.nVar = length(baseVar);
 Base.Direct = isDirect;
+Base.Sections = sections;
 
 if wing
     
@@ -96,8 +97,15 @@ if wing
     Base.nPartitions = length(parameters.Semispan);
 end
 
-%% For postprocessor
-configInputs = baseVar;
+if ~exist('display','var')
+    
+    display = false;
+end
 
-% Save basline so that it can be loaded into postprocess
-save('Baseline')
+if display
+    
+    points = flowfinder(baseProperties);
+    plotter(points,"title",'Baseline Configuration')
+else
+    save('Baseline')
+end
