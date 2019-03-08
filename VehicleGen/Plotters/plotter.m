@@ -34,7 +34,12 @@ zlabel('z (m)')
 
 colour=[0.6 0.6 0.6];
 
-[~,nPoints] = size(struct);
+if isstruct(struct) || iscell(struct)
+    
+    [~,nPoints] = size(struct);
+else
+    nPoints = 1;
+end
 
 for ii=1:nPoints
     
@@ -43,13 +48,23 @@ for ii=1:nPoints
     if iscell(part)
         
         points = part{:};
-    else
+        
+    elseif isstruct(part)
+        
         points = part.Points;
+    else
+        points = struct;
     end
     
     x = points(:,:,1);
     y = points(:,:,2);
-    z = points(:,:,3);
+    
+    if size(points,3) == 2
+        
+        z = zeros(size(y));
+    else
+        z = points(:,:,3);
+    end
     
     %%
     if any(plotDefs == "impact")
@@ -151,7 +166,7 @@ for ii=1:nPoints
             plot3([0 unitTx(i)/10]+cx(i),[0 unitTy(i)/10]+cy(i),[0 unitTz(i)/10]+cz(i),'b')
             plot3([0 unitSx(i)/10]+cx(i),[0 unitSy(i)/10]+cy(i),[0 unitSz(i)/10]+cz(i),'g')
         end
-    
+        
     end
     
     %%

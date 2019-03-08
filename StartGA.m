@@ -5,8 +5,6 @@ initialise();
 
 tic
 
-addpath(genpath('GeneticAlgorithm'))
-
 %% Main GA program (Only single-objective currently available)
 
 % nPop must be even
@@ -42,12 +40,12 @@ configInputs = GlobalBestPos;
 % Save global best history/pareto front figure and workspace in current directory
 if nFun == 1
     
-    saveas(gcf,'GlobalBestHistory')
+    saveas(gcf,[resultPath '\GlobalBestHistory'])
 else
-    saveas(gcf,'ParetoFront')
+    saveas(gcf,[resultPath '\ParetoFront'])
 end
 
-save('OptimisationResults')
+save(fullfile(resultPath, 'OptimisationResults'))
 
 % Use this function to create output plots/results for arbitrary configs, 
 % will not work for cluster simulations

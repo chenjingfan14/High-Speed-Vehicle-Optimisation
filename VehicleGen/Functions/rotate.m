@@ -24,11 +24,8 @@ for i=1:length(partStruct)
     ac = c - a;
     db = b - d;
 
-    xNorm = db(:,:,2).*ac(:,:,3) - db(:,:,3).*ac(:,:,2);
-    yNorm = db(:,:,3).*ac(:,:,1) - db(:,:,1).*ac(:,:,3);
-    zNorm = db(:,:,1).*ac(:,:,2) - db(:,:,2).*ac(:,:,1);
-    
-    magNorm = (xNorm.^2 + yNorm.^2 + zNorm.^2).^0.5;
+    norm = crossmat(db, ac);
+    magNorm = magmat(norm);
     
     %% CHECK
     % Zero magnitude normals (ie lines not planes) will give NaN when 
@@ -37,18 +34,12 @@ for i=1:length(partStruct)
     magNorm(con) = 1e-20;
     %%
     
-    norm = zeros(size(magNorm));
-    
-    norm(:,:,1) = xNorm;
-    norm(:,:,2) = yNorm;
-    norm(:,:,3) = zNorm;
-    
     unitNorm = norm./magNorm;
     
     yzUnitNorm = (unitNorm(:,:,2).^2 + unitNorm(:,:,3).^2).^0.5;
     halfAngle = atan2(-unitNorm(:,:,1),yzUnitNorm)*180/pi;
     
-    flow = xNorm < 0;
+    flow = norm(:,:,1) < 0;
     
     del = round(halfAngle,10);
     

@@ -16,16 +16,9 @@ radialLocation = atan2d(centre(:,:,2) - points(1,1,2), centre(:,:,3) - points(1,
 ac = c - a;
 db = b - d;
 
-xNorm = db(:,:,2).*ac(:,:,3) - db(:,:,3).*ac(:,:,2);
-yNorm = db(:,:,3).*ac(:,:,1) - db(:,:,1).*ac(:,:,3);
-zNorm = db(:,:,1).*ac(:,:,2) - db(:,:,2).*ac(:,:,1);
-
-% Magnitude of normal
-magNorm = (xNorm.^2 + yNorm.^2 + zNorm.^2).^0.5;
-
-norm(:,:,1) = xNorm;
-norm(:,:,2) = yNorm;
-norm(:,:,3) = zNorm;
+% Normal vector and its magnitude
+norm = crossmat(db, ac);
+magNorm = magmat(norm);
 
 unitNorm = norm./magNorm;
 

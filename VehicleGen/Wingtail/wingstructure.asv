@@ -19,12 +19,10 @@ xLE = wingPoints(1,:,1);
 
 %% Skin thickness
 % Based on chord
-% skinThick = wingbox.SkinThick * chords;
-
-% Constant across span
+skinThick = wingbox.SkinThick * chords;
+% Constant ac
 skinThick = repmat(wingbox.SkinThick,size(chords));
 
-%%
 [row, col, ~] = size(wingPoints);
 
 % If wing has non-zero trailing edge, do not allow spars to interfere
@@ -86,10 +84,8 @@ boxIn(:,half+1:end,[2 3]) = boxOut(:,half+1:end,[2 3]) + (skinThick(half+1:end) 
 skinNodes = (boxOut + boxIn)/2;
 
 skin.Nodes = skinNodes;
-% skin.Thickness = skinThick(1:half) .* chords(1:half);
-skin.Thickness = skinThick(1);
-% wing.Spar.Thickness = sparThick * chords(1:half);
-wing.Spar.Thickness = sparThick(1);
+skin.Thickness = skinThick(1:half) .* chords(1:half);
+wing.Spar.Thickness = sparThick * chords(1:half);
 wing.Box = between;
 wing.Skin = skin;
 wing.Spar.Points = sparCell;

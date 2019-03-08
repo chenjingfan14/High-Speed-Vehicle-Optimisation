@@ -4,10 +4,13 @@ clear all
 close all
 clc
 
-addpath(genpath('MultiSwarm'))
+addpath(genpath('Optimisation'))
 addpath(genpath('VehicleGen'))
-addpath(genpath('AeroPrediction'))
+addpath(genpath('Aerodynamics'))
 addpath(genpath('Structures'))
+addpath(genpath('Functions'))
+
+resultPath = [pwd '\Results'];
 
 %%
 % Number of processors to be used (up to 4 on desktop)

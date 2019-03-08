@@ -1,4 +1,4 @@
-function [aerofoil,aftBody,success,reason] = bodyfoil(aftBody,aerofoil,offset)
+function [aerofoil,aftBody,allPoints,success,reason] = bodyfoil(aftBody,aerofoil,offset)
 
 %% Get body normals for line-plane intersection (wing-body intersection)
 % Bring in point matrix and x,y,z coordinates of body
@@ -110,6 +110,7 @@ for i=1:numAerofoils
 %             aerofoil.Points = foil;
 %             plotter({aftBody.Points,aerofoil.Points});
             
+            allPoints = [];
             success = false;
             return
         end
@@ -142,8 +143,6 @@ for i=1:numAerofoils
     
     rowUpper = 1:upCut;
     rowLower = (0:loCut) + upCut;
-    
-%     bodyUpper(:,:,1) = xBody = bodyPoints(:,1,1);
     
     %% Splitting body into separate upper and lower parts
     % Reshape back to 3D
@@ -210,9 +209,11 @@ for i=1:numAerofoils
     
     wetArea = ((wetChord2 + wetChord1)/2)*wetSpan;
     Taper = wetChord2/wetChord1;
+    
     if Taper == inf
         Taper = 0;
     end
+    
     wetMAC = (2/3)*wetChord1*((1+Taper+(Taper^2))/(1+Taper));
     
     wingtail.WetChord = [wetChord1, wingtail.Chord(2:end)];
@@ -222,5 +223,13 @@ for i=1:numAerofoils
     
     aerofoil(i) = wingtail;
 end
+
+% Discretise aerofoils based on target length
+aerofoil = discwing(aerofoil);
+
+[~,dim,~] = size(aerofoil.Points);
+allWing = [nan(1,dim,3); aerofoil.Points; nan(1,dim,3)];
+
+allPoints = [bodyUpper, allWing, bodyLower];
 
 success = true;

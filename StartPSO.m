@@ -13,6 +13,7 @@ maxIt = 100; % Maximum number of iterations
 w = 0.3; % Intertia coeff
 c1 = 1.49; % Personal acceleration coeff
 c2 = 1.49; % Social acceleration coeff
+mutProb = 1/nVar; % Probability of mutation
 
 fi = maxIt; % Display Pareto Front evey fi iterations
 
@@ -29,16 +30,15 @@ if nFun == 1 % Use Single-Objective Algorithm
     maxStall = 50;
     
     % Simplest Single-Objective PSO Algorithm
-    % [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    % [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
     
     % Smarter Single-Objective PSO Algorithm
-    [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 
 else % Use Multi-Objective Algorithm
     
     inv = false(1,nFun);
     maxPF = 100; % Maximum number of Pareto Front values
-    mutProb = 1/nVar; % Probability of mutation
     
     [GlobalBestFit,GlobalBestPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
 end
@@ -56,12 +56,12 @@ configInputs = GlobalBestPos;
 % Save global best history/pareto front figure and workspace in current directory
 if nFun == 1
     
-    saveas(gcf,'GlobalBestHistory')
+    saveas(gcf,[resultPath '\GlobalBestHistory'])
 else
-    saveas(gcf,'ParetoFront')
+    saveas(gcf,[resultPath '\ParetoFront'])
 end
 
-save('OptimisationResults')
+save(fullfile(resultPath, 'OptimisationResults'))
 
 % Use this function to create output plots/results for arbitrary configs, 
 % will not work for cluster simulations

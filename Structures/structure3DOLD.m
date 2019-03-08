@@ -1,4 +1,4 @@
-function [displace, newWing, newPart] = structure3D(wing, part, wingP, H, L, LH)
+function [ua, part] = structure(wing, part, wingP, H)
 % Initial structural program. See Low-fidelity aerostructural optimization
 % of aircraft wings with a simplified wingbox model using OpenAeroStruct
 
@@ -35,13 +35,7 @@ spanBeamVectors = diff(sparNodes,1,2);
 spanLength = squeeze(spanBeamVectors(:,:,1).^2 + spanBeamVectors(:,:,2).^2 + spanBeamVectors(:,:,3).^2).^0.5;
 
 spanTaper = (sparThick(1:end-1) - sparThick(2:end))./sparThick(2:end);
-
-if isempty(spanTaper)
-    
-    linTaperEq = 1;
-else
-    linTaperEq = 1 + spanTaper;
-end
+linTaperEq = 1 + spanTaper;
 
 %% Replace by creating box points earlier?
 box = wing.Box;
@@ -117,13 +111,9 @@ M = 0.25 * crossLeft1 + 0.25 * crossRight1 +...
 F = [sum(F(1:first,:,:),1); F(first+1:last-1,:,:); sum(F(last:end,:,:),1)];
 M = [sum(M(1:first,:,:),1); M(first+1:last-1,:,:); sum(M(last:end,:,:),1)];
 
-Fs = H' * force(:);
-
 % Rearrange wing spanwise wrap to wingbox chordwisel wrap
-[row,col,~] = size(M);
+[row,col,~] = size(F);
 dim = row*col*3;
-
-F = reshape(Fs,row,col,3);
 
 halfCol = ceil(col/2);
 
@@ -134,8 +124,6 @@ transID = [origID(:, 1:halfCol, :); rot90(origID(:, halfCol + 1:end, :),2)];
 
 F = F(transID);
 M = M(transID);
-
-M(:) = 0;
 
 %% Chordwise beam stiffness properties
 % Reshape points, put first node at end to complete circle
@@ -241,9 +229,7 @@ chordGJ_L = G * chordJ ./ chordLength;
 chordE4_L = 4 * E ./ chordLength;
 chordE2_L = 2 * E ./ chordLength;
 
-%% Update whether based on chord or not
-% spanRad = (sparThick(1:end-1) + sparThick(2:end))/2;
-spanRad = sparThick;
+spanRad = (sparThick(1:end-1) + sparThick(2:end))/2;
 spanA = pi * spanRad.^2;
 
 spanMass = spanA .* spanLength * rhoAl;
@@ -262,10 +248,6 @@ spanE4_L = 4 * E ./ spanLength;
 spanE2_L = 2 * E ./ spanLength;
 
 [chordBeams,~] = size(chordLength);
-
-array = 1:chordBeams;
-
-array = array(index > 0);
 
 %% Mass properties
 
@@ -320,12 +302,8 @@ for i = nSecs:-1:1
     
     init = (i-1)*dim/nSecs + 1;
     
-%     kBox = elementalStiffnessMatrices(chordAE_L(:,i),chordE12_L3(:,i),chordE6_L2(:,i),...
-%         chordGJ_L(:,i),chordE4_L(:,i),chordE2_L(:,i),chordIy(:,i),chordIz(:,i),...
-%         boxlmn1(:,i,:),boxlmn2(:,i,:),boxlmn3(:,i,:));
-    
     kBox = elementalStiffnessMatrices(chordAE_L(:,i),chordE12_L3(:,i),chordE6_L2(:,i),...
-        chordGJ_L(:,i),chordE4_L(:,i),chordE2_L(:,i),chordIy,chordIz,...
+        chordGJ_L(:,i),chordE4_L(:,i),chordE2_L(:,i),chordIy(:,i),chordIz(:,i),...
         boxlmn1(:,i,:),boxlmn2(:,i,:),boxlmn3(:,i,:));
     
     % Mid partitions will have two spar sets interefering, root and tip
@@ -333,7 +311,7 @@ for i = nSecs:-1:1
     if i ~= 1
         
         kSpar = elementalStiffnessMatrices(spanAE_L(:,i-1),spanE12_L3(:,i-1),spanE6_L2(:,i-1),...
-            spanGJ_L(:,i-1),spanE4_L(:,i-1),spanE2_L(:,i-1),spanIy,spanIz,...
+            spanGJ_L(:,i-1),spanE4_L(:,i-1),spanE2_L(:,i-1),spanIy(:,i-1),spanIz(:,i-1),...
             sparlmn1(:,i-1,:),sparlmn2(:,i-1,:),sparlmn3(:,i-1,:));   
     end
     
@@ -407,43 +385,63 @@ for i = 1:6:length(qf)
     j = j + 3;
 end
 
-[dim1,dim2,~] = size(skin.Nodes);
+skinNodes = skin.Nodes(:) + displace;
 
-displace3D(:,:,1) = reshape(qf(xForce),dim1,dim2);
-displace3D(:,:,2) = reshape(qf(yForce),dim1,dim2);
-displace3D(:,:,3) = reshape(qf(zForce),dim1,dim2);
+skinNodes = reshape(skinNodes,[],3);
 
-skinNodes3D = skin.Nodes + displace3D;
-skinNodes1D = skin.Nodes(:) + displace;
+for i = 3:-1:1
     
-% newCentre = H * skinNodes1D;
-newPoints = LH * skinNodes1D;
+    newCentre(:,i) = H * skinNodes(:,i); 
+end
 
-% newCentre = reshape(newCentre,size(part.centre));
-newPoints = reshape(newPoints,size(part.Points));
+newCentre = reshape(newCentre,size(part.centre));
+
+% rotation(:,:,1) = reshape(qf(xMoment),reshape1,reshape2);
+% rotation(:,:,2) = reshape(qf(yMoment),reshape1,reshape2);
+% rotation(:,:,3) = reshape(qf(zMoment),reshape1,reshape2);
+% 
+% displace = [displace(1:row,:,:), flipud(displace(row+1:end,:,:))];
+% rotation = [rotation(1:row,:,:), flipud(rotation(row+1:end,:,:))];
+% 
+% % Repeat for all leading/trailing edge panels
+% displace = [repmat(displace(1,:,:), first, 1); displace(2:end-1,:,:); repmat(displace(end,:,:), boxDim - last + 1, 1)];
+% rotation = [repmat(rotation(1,:,:), first, 1); rotation(2:end-1,:,:); repmat(rotation(end,:,:), boxDim - last + 1, 1)];
+% 
+% %% Apply displacements to aerodynamic mesh
+% % Could probably cross beforehand and then separate?
+% rot2 = rotation(1:end-1,1:end-1,:);
+% rot1 = rotation(1:end-1,2:end,:);
+% rot4 = rotation(2:end,1:end-1,:);
+% rot3 = rotation(2:end,2:end,:);
+% 
+% rotVec2 = vec2(1:end-1,:,:);
+% rotVec1 = vec1(1:end-1,:,:);
+% rotVec4 = vec4(2:end,:,:);
+% rotVec3 = vec3(2:end,:,:);
+% 
+% ua = 0.25 .* displace(1:end-1,1:end-1,:) + crossmat(rot2, rotVec2)...
+%     + 0.25 .* displace(1:end-1,2:end,:) + crossmat(rot1, rotVec1)...
+%     + 0.25 .* displace(2:end,1:end-1,:) + crossmat(rot4, rotVec4)...
+%     + 0.25 .* displace(2:end,2:end,:) + crossmat(rot3, rotVec3);
+% 
+% % Wing/body joint is rigid
+% ua(:,1,:) = 0;
+% ua(:,end,:) = 0;
+% 
+% newCentre = wingCentre + ua;
+
+%% Check new wing
+% newPoints = part.Points + displace;
+% part = normals(newPoints);
+
+% plotter(part);
+%%
 
 plotter(part)
 figure(2)
 hold on
-plot3(newPoints(:,:,1),newPoints(:,:,2),newPoints(:,:,3),'k*')
-% plot3(wingCentre(:,:,1),wingCentre(:,:,2),wingCentre(:,:,3),'r*')
-% plot3(newCentre(:,:,1),newCentre(:,:,2),newCentre(:,:,3),'k*')
-
-plotter(newPoints);
-
-newPart = normals(newPoints);
-
-newWing = wing;
-newWing.Skin.Nodes = skinNodes3D;
-
-%% Transferring skin nodes to make corresponding spar nodes
-% Way to just flag skin node as spar instead of making separate structure?
-half = floor(size(skinNodes3D,2)/2);
-skinToSpar = [skinNodes3D(:,1:half,:); rot90(skinNodes3D(:,half+1:end,:),2)];
-
-index(index == 0) = [];
-
-newWing.Spar.Nodes(index,:,:) = skinToSpar(array,:,:);
+plot3(wingCentre(:,:,1),wingCentre(:,:,2),wingCentre(:,:,3),'r*')
+plot3(newCentre(:,:,1),newCentre(:,:,2),newCentre(:,:,3),'k*')
 
 close all
 

@@ -416,8 +416,8 @@ displace3D(:,:,3) = reshape(qf(zForce),dim1,dim2);
 skinNodes3D = skin.Nodes + displace3D;
 skinNodes1D = skin.Nodes(:) + displace;
     
-% newCentre = H * skinNodes1D;
-newPoints = LH * skinNodes1D;
+% newCentre(:,i) = H * skinNodes1D;
+newPoints(:,i) = L * H * skinNodes1D;
 
 % newCentre = reshape(newCentre,size(part.centre));
 newPoints = reshape(newPoints,size(part.Points));

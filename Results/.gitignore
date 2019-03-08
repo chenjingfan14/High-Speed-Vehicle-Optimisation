@@ -1,0 +1,10 @@
+# Results Folder: Want to ensure all file types
+# are ignored
+
+# Things appearing in TestCases/ repo to ignore:
+*.mat
+*.fig
+*.dat
+*.png
+*.jpeg
+*.emp
