@@ -1,7 +1,7 @@
 function variCons = standardvariables(variCons,options)
 %% Standardised variables to be held constant during optimisation
 
-Bezier = options.Bezier;
+aerofoilMethod = options.AerofoilMethod;
 wing = options.Wing;
 aft = options.Aft;
 fore = options.Fore;
@@ -11,9 +11,11 @@ baseline = options.Baseline;
 
 %% 2D Aerofoil Section Defintion
 
-% Define sections as Bezier curves
-if Bezier
+if aerofoilMethod == "BP3434"
     
+elseif aerofoilMethod == "Bezier"
+    
+    % Define sections as Bezier curves
     BezierControlPoints = options.BezierControlPoints;
     
     % Control point min/max coordinates
@@ -29,13 +31,35 @@ if Bezier
         error("Number of Bezier control points not consistent with options definition")
     end
     
-    %     standSec = repmat(standSec,1,1,n+1);
     sectionStr = "Bezier";
-else
+    
+elseif aerofoilMethod == "BezierTC"
+    
+    BezierControlPoints = options.BezierControlPoints;
+    
+    % Control point min/max coordinates
+    standSec = [1, 0.7,   0.5,    0.3,    0.1,    0,      0;  % xc
+        1,      0.7,    0.5,    0.3,    0.1,    0,      0;  % xt
+       -0.03,  -0.1,   -0.1,   -0.05,  -0.05,   0,      0;  % zc
+        0,     -0.05,  -0.05,  -0.05,  -0.05,   0.05,   0]'; % zt
+    
+    [standSecPoints,~] = size(standSec(2:end,:));
+    
+    if standSecPoints ~=  BezierControlPoints
+        
+        error("Number of Bezier control points not consistent with options definition")
+    end
+    
+    sectionStr = "Bezier";
+    
+elseif aerofoilMethod == "Preloaded"
     
     % Define sections be pre-loaded data files
     standSec = 1;
     sectionStr = "Section";
+    
+else
+    error('No standard variables set for aerofoil creation method %s', aerofoilMethod);
 end
 
 Definition = {...

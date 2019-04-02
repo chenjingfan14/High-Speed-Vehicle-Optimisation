@@ -7,7 +7,7 @@ Vinf = num2cell(run.U);
 for ii=1:length(partStruct)
     
     % Initialise normal coords
-    unitNorm = partStruct(ii).unitNorm;
+    unitNorm = partStruct{ii}.unitNorm;
     
     dims = size(unitNorm);
     
@@ -38,7 +38,7 @@ for ii=1:length(partStruct)
     unitSurf(:,:,2) = Sy;
     unitSurf(:,:,3) = Sz;
     
-    partStruct(ii).unitTang = unitTang./Tmag;
-    partStruct(ii).unitSurf = unitSurf./Smag;
+    partStruct{ii}.unitTang = unitTang./Tmag;
+    partStruct{ii}.unitSurf = unitSurf./Smag;
     
 end

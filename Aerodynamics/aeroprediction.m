@@ -1,19 +1,16 @@
-function [cost,results] = aeroprediction(properties,allPoints,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
+function [cost,results] = aeroprediction(properties,fricData,parameters,options)
 %% Aerodynamic prediction
 
 %% Initialisation
 % Angle of attack, Mach matrix dimensions and total number of flight states
 % to be run
+flow = options.Flow;
 dim = flow.Dim;
 runs = flow.Runs;
 
 % Configuration reference parameters
 Aref = parameters.Aref;
 MAC = parameters.MAC;
-
-Lmat = parameters.L;
-Hmat = parameters.H;
-Kmat = parameters.LH;
 
 % Takes section properties and outputs point matrices, number of parts,
 % whether part is part of body, and prediction methods to be used for every
@@ -42,6 +39,10 @@ control = options.Control;
 baseline = options.Baseline;
 structures = options.Structure;
 
+thetaBetaM = options.ThetaBetaM;
+maxThetaBetaM = options.MaxThetaBetaM;
+PrandtlMeyer = options.PrandtlMeyer;
+
 for i=1:runs
     %% Outer flight state loop
     
@@ -62,13 +63,13 @@ for i=1:runs
     if i == 1 || Minf ~= MinfPrev
         % Find maximum compression angle for which attached shock solution exists
         % for free stream Mach number
-        loc = Minf == maxThetaBetaM(1,:);
-        maxThetaInf = maxThetaBetaM(2,loc);
+        loc = Minf == options.MaxThetaBetaM(1,:);
+        maxThetaInf = options.MaxThetaBetaM(2,loc);
     end
     
     if viscous && (i == 1 || alpha ~= alphaPrev)
         
-%         allPoints = velocitydef(allPoints,run);
+        fricData = velocitydef(fricData,run);
     end
     
     if control
@@ -277,6 +278,10 @@ for i=1:runs
             
             if partType(j) == "wing" && structures
                
+                Hmat = partProp.H;
+                Lmat = partProp.L;
+                Kmat = partProp.K;
+                
                 wingPressure{i} = P .* -unitNorm;
                 [displace, partProp, part] = structure3D(partProp, part, wingPressure{i}, Hmat, Lmat, Kmat);
                 
@@ -395,9 +400,9 @@ for i=1:runs
 %             rot = 0;
 %         end
 
-        allPoints = cornervelocities(allPoints, run, Lmat);
+%         fricData = cornervelocities(fricData, run);
         
-%         intstreamline(allPoints,run);
+%         intstreamline(fricData,run);
         
         % Independent of AoA
         % Cdf = simplefriction(properties,partType,parameters,run);

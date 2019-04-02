@@ -1,4 +1,4 @@
-function [GlobalBestFit,GlobalBestPos,history] = GeneticAlgorithm(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,Pc,Pm,Er,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
+function [GlobalBestFit,GlobalBestPos,history] = GeneticAlgorithm(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,Pc,Pm,Er,nFun,inv,fi,options)
 
 %%  Initialization
 
@@ -11,6 +11,8 @@ history = zeros(maxIt, nFun + 2);
 
 %% Initialise
 
+tolerance = options.Tolerance;
+
 % Array to hold best cost value on each iteration
 GlobalBestFit = zeros(maxIt+1,1);
 GlobalBestPos = zeros(maxIt+1,nVar);
@@ -18,7 +20,7 @@ GlobalBestPos = zeros(maxIt+1,nVar);
 % Create population array
 popGene = unifrnd(varMinMat,varMaxMat,varSize);
 
-[popFitness,popGene] = costcaller(costFun,nPop,nFun,popGene,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+[popFitness,popGene] = costcaller(costFun,nPop,nFun,popGene,cond,varArray,options);
 
 [GlobalBestFit(1),bestID] = min(popFitness);
 GlobalBestPos(1,:) = popGene(bestID,:);
@@ -50,7 +52,7 @@ for it = 2 : maxIt + 1
     % Uniform mutation
     newPopGene = unimutation(newPopGene,nPop,nVar,varMinMat,varMaxMat,Pm);
         
-    [newPopFitness,newPopGene] = costcaller(costFun,nPop,nFun,newPopGene,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    [newPopFitness,newPopGene] = costcaller(costFun,nPop,nFun,newPopGene,cond,varArray,options);
     
     [newPopFitness,sortID] = sort(newPopFitness,'descend');
     newPopGene = newPopGene(sortID,:);
@@ -80,7 +82,9 @@ for it = 2 : maxIt + 1
     
     history(it,:) = [it-1, GlobalBestFitDisp(it), stall];
     
-    if mod(it-1,fi) == 0 || stall == maxStall
+    convergence = stall == maxStall || GlobalBestFit(it) < tolerance;
+    
+    if mod(it-1,fi) == 0 || convergence
         
         if options.Baseline
             
@@ -104,7 +108,7 @@ for it = 2 : maxIt + 1
         pause(0.00001)
         fcount = fcount+1;
         
-        if stall == maxStall
+        if convergence
             
             GlobalBestFit(it+1:end) = [];
             GlobalBestPos(it+1:end,:) = [];

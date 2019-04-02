@@ -1,7 +1,9 @@
-function [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
+function [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,options)
 
 Ni = floor(0.25*nPop);
 N = Ni;
+
+tolerance = options.Tolerance;
 
 % Creating 3 sets within population, defines mutation method on set
 % However all particles still communicate with each other regardless of
@@ -33,7 +35,7 @@ parPos = unifrnd(varMinMat,varMaxMat,varSize);
 parVel = zeros(varSize);
 
 % Calculate initial fitness functions
-[parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+[parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,options);
 
 parBestPos = parPos;
 parBestFit = parFit;
@@ -109,7 +111,7 @@ for it = 2:maxIt+1
     parPos(con2) = varMinMat(con2);
     
     % Calculate fitness functions
-    [parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    [parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,options);
     
     %% Update best particle/global fitness values and corresponding positions
     ind = parFit < parBestFit;
@@ -158,7 +160,9 @@ for it = 2:maxIt+1
     
     history(it,:) = [it-1, GlobalBestFitDisp(it), stall];
     
-    if mod(it-1,fi) == 0 || stall == maxStall
+    convergence = stall == maxStall || GlobalBestFit(it) < tolerance;
+    
+    if mod(it-1,fi) == 0 || convergence
         
         if options.Baseline
             
@@ -182,7 +186,7 @@ for it = 2:maxIt+1
         pause(0.00001)
         fcount = fcount+1;
         
-        if stall == maxStall
+        if convergence
             
             GlobalBestFit(it+1:end) = [];
             GlobalBestPos(it+1:end,:) = [];

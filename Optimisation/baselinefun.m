@@ -1,8 +1,8 @@
-function [Base] = baselinefun(variCons,flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer,display)
+function [Base] = baselinefun(variCons,options,display)
 %% Baseline configuration to be improved upon (currently X-34)
 
-% X-34 build uses pre-defined aerofoil sections so set Bezier to false
-options.Bezier = false;
+% X-34 build uses pre-defined aerofoil sections so set method accordingly
+options.AerofoilMethod = "Preloaded";
 % Baseline not yet created for cost function so set to false
 options.Baseline = false;
 
@@ -70,13 +70,14 @@ sections = foilData(sectionPos);
 
 baseVar = baseVar';
 
-[baseProperties,allPoints,~,parameters] = particlecreator(baseVar,baseVar,varArray,sections,options);
+[~,Base.Results,baseProperties,~,~,parameters] = particlecreator(baseVar,baseVar,varArray,sections,options);
 % parameters.Aref = 33.213;
 
-[~,Base.Results] = aeroprediction(baseProperties,allPoints,flow,parameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+% [~,Base.Results] = aeroprediction(baseProperties,fricPoints,parameters,options);
 
 % Used to save direct inputs for postprocess
 if isDirect
+    
     baseVar = hardtransform(baseVar,cond,varArray,"inverse");
     
     % Inverse transform means that configuration is no longer direct
@@ -93,8 +94,7 @@ Base.Sections = sections;
 
 if wing
     
-    Base.Bezier = options.Bezier;
-    Base.nPartitions = length(parameters.Semispan);
+    Base.WingPartitions = length(parameters.Semispan);
 end
 
 if ~exist('display','var')

@@ -1,6 +1,6 @@
 function [parPos,physicalPos] = contrans(parPos,nPop,cond,varArray,options)
 
-hardstyle = options.Hardtransform;
+hardstyle = options.HardTransform;
 
 parPos = conditioning(parPos,nPop,cond);
 

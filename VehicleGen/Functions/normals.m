@@ -67,6 +67,10 @@ A2 = 0.5.*base.*height;
 
 area = A1 + A2;
 
+%% Is panel triangular or quadrilateral
+
+triangle = all(a == b,3) | all(b == c,3) | all(c == d,3) | all(d == a,3);
+
 partStruct.Points = points;
 partStruct.a = a;
 partStruct.b = b;

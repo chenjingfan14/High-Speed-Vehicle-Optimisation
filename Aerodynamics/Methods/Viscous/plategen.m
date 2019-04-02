@@ -32,8 +32,8 @@ y(2:end-1,2:end-1) = y(2:end-1,2:end-1) + randy;
 
 %%
 
-points.x = x;
-points.y = y;
-points.z = z;
-points = xyztopoints(points);
+points(:,:,1) = x;
+points(:,:,2) = y;
+points(:,:,3) = z;
+points = normals(points);
 plotter(points)

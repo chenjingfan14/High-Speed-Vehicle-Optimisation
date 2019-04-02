@@ -16,7 +16,7 @@ nPoints = nPanels + 1;
 
 %% Creating uniform/randomly perturbed panels
 % Replace with size(points.x)
-x = ones(nPoints); % x,y points (x-1,y-1 panels)
+x = ones(nPoints,nPoints); % x,y points (x-1,y-1 panels)
 
 % Creating x,y point matrices from 0 to [x y]-1
 % Number of points
@@ -47,8 +47,8 @@ ylognorm = y(1:end-1,1:end-1);
 % yr(2:end-1,2:end-1) = y(2:end-1,2:end-1) + randy;
 
 %% TEMP FOR ONE QUAD
-randx = rand(nPoints,nPoints)*0.5 - 0.25;
-randy = rand(nPoints,nPoints)*0.5 - 0.25;
+randx = rand(dim1,dim2)*0.5 - 0.25;
+randy = rand(dim1,dim2)*0.5 - 0.25;
 
 xr = x/2 + randx;
 yr = y/2 + randy;
@@ -255,18 +255,26 @@ dy_dxhat = 0.25*(-pcorny(1,:)+pcorny(2,:)+pcorny(3,:)-pcorny(4,:) +...
 dy_dyhat = 0.25*(-pcorny(1,:)-pcorny(2,:)+pcorny(3,:)+pcorny(4,:) +...
     eps.*(pcorny(1,:)-pcorny(2,:)+pcorny(3,:)-pcorny(4,:)));
 
-D = [dx_dxhat, dx_dyhat;...
+dx_dxhat = permute(dx_dxhat,[3 1 2]);
+dx_dyhat = permute(dx_dyhat,[3 1 2]);
+dy_dxhat = permute(dy_dxhat,[3 1 2]);
+dy_dyhat = permute(dy_dyhat,[3 1 2]);
+
+D = [dx_dxhat, dx_dyhat;
     dy_dxhat, dy_dyhat];
 
 J = dx_dxhat.*dy_dyhat - dx_dyhat.*dy_dxhat;
 
-% invD = inv(D);
+%     invD = inv(D(:,:,i));
+%
+%     V1i = J(:,:,i)*invD*[Vx1i; Vyz1i];
+%     V2i = J(:,:,i)*invD*[Vx2i; Vyz2i];
 
-% V1i = J*invD*[Vx1i; Vyz1i];
-% V2i = J*invD*[Vx2i; Vyz2i];
+%     V1i = J(:,:,i) \ D(:,:,i) * [Vx1i; Vyz1i];
+%     V2i = J(:,:,i) \ D(:,:,i) * [Vx2i; Vyz2i];
 
-V1i = J \ D * [Vx1i; Vyz1i];
-V2i = J \ D * [Vx2i; Vyz2i];
+V1i = 1/J(:,:,i) * D(:,:,i) * [Vx1i; Vyz1i];
+V2i = 1/J(:,:,i) * D(:,:,i) * [Vx2i; Vyz2i];
 
 Vx1i = V1i(1);
 Vyz1i = V1i(2);

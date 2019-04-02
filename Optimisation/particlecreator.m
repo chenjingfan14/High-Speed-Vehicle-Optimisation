@@ -1,16 +1,13 @@
-function [assemblyProperties,allPoints,parPos,parameters,flag] = particlecreator(parPos,configPos,varArray,sections,options)
+function [cost,results,assemblyProperties,fricData,parPos,parameters] = particlecreator(parPos,configPos,varArray,sections,options)
 %% Assembles arbitrary configuration
 % Will fuse together multiple aerofoil sections with body. Will also work
 % for aerofoil alone or body alone configurations
 
 Wing = options.Wing;
 Aft = options.Aft;
-Fore = options.Fore;
-Nose = options.Nose;
 Control = options.Control;
 Structure = options.Structure;
-
-flag = false;
+Viscous = options.Viscous;
 
 %% Create body
 % Check if body is part of configuration, if so build it, if not set body
@@ -35,6 +32,9 @@ if Aft
     % Create aft body portion of body
     aftbody = arbitraryfuse([aftbodyGeom,aftBodyLength],noseForeLength);
     
+    [~,dim_f,~] = size(aftbody.Points);
+    radial = squeeze(aftbody.Points(1,:,:));
+    
     aftbodyHeight = aftbody.Height;
     aftbodyWidth = aftbody.Width;
     
@@ -43,6 +43,34 @@ if Aft
     parameters.BodyL = noseForeLength + aftBodyLength;
     parameters.BodyW = aftbodyHeight;
     parameters.BodyH = aftbodyWidth;
+    
+    % Create nose and link together with aftbody by interpolating to
+    % create forebody
+    
+    % If zero length or radius, nose must be pointed, therefore empty as
+    % first forebody points will equal singular nose point
+    if ~all([noseLength,noseRad])
+        
+        Nose = '';
+        nosePoints = zeros(1,dim_f,3);
+    else
+        Nose = nose([noseRad,noseLength,zNoseOff],dim_f,noseForeLength);
+        nosePoints = Nose.Points;
+    end
+    
+    forebody = foreGen(foreBodyLength,nosePoints,radial,0.5);
+    
+    body = [nosePoints(1:end-1,:,:); forebody.Points(1:end-1,:,:); aftbody.Points];
+    bodyPoints = normals(body);
+    
+    if Viscous
+        
+        bodyPoints.L = fsiinterpolation(bodyPoints);
+    
+        fricData{1} = bodyPoints;
+    else
+        fricData{1} = [];
+    end
     
 else % Set all body parts to empty
     
@@ -58,7 +86,9 @@ end
 
 % Update later to include tail
 if Wing
+    
     wingDim = 1;
+    chordDisc = options.ChordDisc;
 end
 
 for i=wingDim:-1:1
@@ -98,9 +128,9 @@ for i=wingDim:-1:1
     % Create aerofoil
     if Control
 %         control = configPos(varArray == ");
-        liftSurface(i) = wingtail(dihedral,semispan,chord,TEsweep,sections,control);
+        liftSurface = wingtail(dihedral,semispan,chord,TEsweep,sections,chordDisc,control);
     else 
-        liftSurface(i) = wingtail(dihedral,semispan,chord,TEsweep,sections);
+        liftSurface = wingtail(dihedral,semispan,chord,TEsweep,sections,chordDisc);
     end
         
     if Aft
@@ -122,7 +152,7 @@ for i=wingDim:-1:1
         attempt = 1;
         
         % Join body and aerofoil together
-        [liftSurface,aftbody,allPoints,success,reason] = bodyfoil(aftbody,liftSurface,[xOffset,zOffset]);
+        [liftSurface,aftbody,success,reason] = bodyfoil(aftbody,liftSurface,[xOffset,zOffset]);
         
         % Stop semispan getting too large, shouldn't need to be larger than
         % maximum body radius
@@ -202,9 +232,9 @@ for i=wingDim:-1:1
                         parSemispan(1) = parSemispan(1) + 0.1 * parSemispan(1);
                             
                         if Control
-                            liftSurface(i) = wingtail(dihedral,semispan,chord,TEsweep,sections,control);
+                            liftSurface = wingtail(dihedral,semispan,chord,TEsweep,sections,chordDisc,control);
                         else
-                            liftSurface(i) = wingtail(dihedral,semispan,chord,TEsweep,sections);
+                            liftSurface = wingtail(dihedral,semispan,chord,TEsweep,sections,chordDisc);
                         end
                 end
                 
@@ -212,14 +242,14 @@ for i=wingDim:-1:1
                 
                 % If wing cannot be combined with body, quit and give inf
                 % values to cost functions
-                flag = true;
+                cost = inf;
                 assemblyProperties = [];
                 parameters = [];
                 return
             end
             
             % Re-try merge
-            [liftSurface,aftbody,allPoints,success,reason] = bodyfoil(aftbody,liftSurface,[xOffset,zOffset]);
+            [liftSurface,aftbody,success,reason] = bodyfoil(aftbody,liftSurface,[xOffset,zOffset]);
             
             % Increase number of attempts and stayOut condition
             attempt = attempt + 1;
@@ -250,76 +280,51 @@ for i=wingDim:-1:1
             configPos(xOffsetVar) = xOffset;
             configPos(zOffsetVar) = zOffset;
         end
+    end
+    
+    if Structure && i == 1
         
-        if Structure && i == 1
-            
-            wingbox.Location = [0.2,0.8]';
-            wingbox.SparThick = 0.05;
-            wingbox.SkinThick = 0.02;
-            
-            liftSurface = wingstructure(liftSurface,wingbox);
-        end
+        wingbox.Location = [0.2,0.8]';
+        wingbox.SparThick = 0.05;
+        wingbox.SkinThick = 0.02;
+        
+        liftSurface = wingstructure(liftSurface,wingbox);
         
     end
-        
     
-end
+    liftSurfPoints = normals(liftSurface.Points);
+    
+    if Structure
+    
+        [L, H, K] = fsiinterpolation(liftSurfPoints,liftSurface.Skin);
+    
+        liftSurface.L = L;
+        liftSurface.H = H;
+        liftSurface.K = K;
 
-if Fore
+        liftSurfPoints.L = L;
     
-    % Find radial aft body points for fore body interpolation
-    % size-1 for panel based over
-    radial = radialpoints(aftbody.Points);
-    [dim_f,~] = size(radial);
+    elseif Viscous
+       
+        L = fsiinterpolation(liftSurfPoints);
+        liftSurfPoints.L = L;
+    end
     
-    % Create nose and link together with aftbody by interpolating to
-    % create forebody
-    
-    % If zero length or radius, nose must be pointed, therefore empty as
-    % first forebody points will equal singular nose point
-    if ~all([noseLength,noseRad])
+    if Viscous
         
-        Nose = '';
-        nosePoints = zeros(1,dim_f,3);
+        %         j = length(fricData) + 1;
+        j = 1;
+        fricData{j,1} = liftSurfPoints;
     else
-        Nose = nose([noseRad,noseLength,zNoseOff],dim_f,noseForeLength);
-        nosePoints = Nose.Points;
+        fricData = [];
     end
     
-    forebody = foreGen(foreBodyLength,nosePoints,radial,0.5);
-    
-    con = isnan(allPoints(1,:,1));
-    
-    a = find(con,1,'first') - 1;
-    
-    [~,nanCols,~] = size(liftSurface.Points);
-    
-    colID = sort([1:dim_f a]);
-    
-    nfCols = length(colID);
-    
-    nosePoints = nosePoints(:,colID,:);
-    forePoints = forebody.Points(:,colID, :);
-    
-%     [~,allCol,~] = size(allPoints);
-    
-    [noseRows,~] = size(nosePoints); 
-    nanNose = nan(noseRows, nanCols, 3);
-    
-    [foreRows,~] = size(forePoints); 
-    nanFore = nan(foreRows, nanCols, 3);
-    
-    allNose = [nosePoints(:,1:a,:), nanNose, nosePoints(:,a+1:nfCols,:)];
-    allFore = [forePoints(:,1:a,:), nanFore, forePoints(:,a+1:nfCols,:)];
-    
-    % Combine, eliminate duplicate points
-    allPoints = [allNose(1:end-1,:,:); allFore(1:end-1,:,:); allPoints];
-    
+    liftSurfaces(i) = liftSurface;    
 end
-
-allPoints = normals(allPoints);
 
 if Wing
+    
+    wing = liftSurfaces(1);
     
     parameters.Chord = chord;
     parameters.Semispan = semispan;
@@ -329,9 +334,6 @@ if Wing
         parameters.Control = control;
     end
     
-    % First liftSurface assumed to be wing
-    wing = liftSurface(1);
-    
     sumArea = sum(wing.Area);
     
     parameters.MAC = sum(wing.Area.*wing.MAC)/sumArea;
@@ -339,15 +341,9 @@ if Wing
     parameters.Wingspan = sum(wing.Span);
     parameters.Sweep = wing.LESweep;
     
-    [L, H, LH] = fsiinterpolation(normals(wing.Points),wing.Skin);
-    
-    parameters.L = L;
-    parameters.H = H;
-    parameters.LH = LH;
-    
 else
     
-    liftSurface = '';
+    liftSurfaces = '';
     
     parameters.Aref = aftbody.Area;
     parameters.MAC = aftbody.Length/2;
@@ -357,5 +353,7 @@ else
 end
 
 %% Put assembly into single cell, delete any empty parts
-assemblyProperties = {Nose,forebody,aftbody,liftSurface};
+assemblyProperties = {Nose,forebody,aftbody,liftSurfaces};
 assemblyProperties(strcmp(assemblyProperties,'')) = [];
+
+[cost,results] = aeroprediction(assemblyProperties,fricData,parameters,options);

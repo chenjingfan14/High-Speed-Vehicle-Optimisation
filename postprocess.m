@@ -10,8 +10,6 @@
 
 close all
 
-Bezier = options.Bezier;
-
 %% Important Parameters
 % Define what to plot, can be in single string containing various options,
 % or string array
@@ -34,20 +32,46 @@ else
     [~,physicalPos] = contrans(configInputs,nPop,cond,varArray,options);
 end
 
-if Bezier
+if isfield(options,'ChordDisc')
+    
+    lDisc = options.ChordDisc;
+    uDisc = flip(lDisc);
+else
+    uDisc = options.UpperDisc;
+    lDisc = options.LowerDisc;
+end
+
+switch aerofoilMethod
+    
+    case "BP3434"
+    
+    sections = BP3434(parPos,varArray,n,nPop,lDisc,uDisc);
+    
+    case "Bezier"
+    
     % Create 2D aerofoil section Bezier curves from control points
     sectionArray = varArray == "Bezier";
     sectionPos = physicalPos(:,sectionArray);
     
-    sections = Bezier3(sectionPos,n,foilData,nPop);
-else
+    sections = Bezier3(sectionPos,n,options.BezierControlPoints,nPop,lDisc,uDisc);
+    
+    case "BezierTC"
+    
+    % Create 2D aerofoil section Bezier curves from control points
+    sectionArray = varArray == "Bezier";
+    sectionPos = physicalPos(:,sectionArray);
+    
+    sections = BezierTC(sectionPos,n,options.BezierControlPoints,nPop,lDisc,uDisc);
+    
+    case "Preloaded"
+    
     % Assign 2D section matrices to particles. Foils variable = section indices
     sectionArray = varArray == "Section";
     sectionPos = physicalPos(:,sectionArray);
     
     zero = sectionPos == 0;
     sectionPos(zero) = 1;
-    sections = foilData(sectionPos);
+    sections = options.foilData(sectionPos);
 end
 
 semispanArray = varArray == "Semispan";
@@ -59,7 +83,7 @@ if baseline
     
     base = options.Base;
     
-    baselinefun(variCons,flow,options,thetaBetaM,maxThetaBetaM,PrandtlMeyer,true);
+    baselinefun(variCons,options,true);
     
     configResults = base.Results;
     configSections = base.Sections;
@@ -295,9 +319,7 @@ for i = nPop:-1:1
     configSections = sections(i,:);
     
     % Create configuration
-    [configProperties,configInputs(i,:),configParameters] = particlecreator(configInputs(i,:),physicalPos(i,:),varArray,configSections,options);
-    % Analyse configuration and plot
-    [~,configResults] = aeroprediction(configProperties,flow,configParameters,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    [~,configResults,configProperties,fricData,configInputs(i,:),configParameters] = particlecreator(configInputs(i,:),physicalPos(i,:),varArray,configSections,options);
     
     points = flowfinder(configProperties);
     

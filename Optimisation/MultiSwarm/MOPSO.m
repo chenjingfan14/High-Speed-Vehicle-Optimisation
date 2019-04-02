@@ -1,4 +1,4 @@
-function [nonDomFit,nonDomPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
+function [nonDomFit,nonDomPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,options)
 %% Multi Objective Particle Swarm Optimiser
 % Main program, initialises swarm based on minimum/maximum design variables
 % Uses cost function values to update swarm positions throughout process
@@ -31,7 +31,7 @@ parPos = unifrnd(varMinMat,varMaxMat,varSize);
 parVel = zeros(varSize);
 
 %% Calculate initial fitness functions
-[parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+[parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,options);
 
 %%
 % Initialise Pareto Front matrices
@@ -162,7 +162,7 @@ for it = 2:maxIt+1
     %% Only optimisation part dependent on problem
     
     % Calculate fitness functions
-    [parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,n,foilData,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    [parFit,parPos] = costcaller(costFun,nPop,nFun,parPos,cond,varArray,options);
    
     %% Update particle best position
     % If new dominates old: new = best

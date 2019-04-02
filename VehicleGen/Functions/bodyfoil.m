@@ -1,4 +1,4 @@
-function [aerofoil,aftBody,allPoints,success,reason] = bodyfoil(aftBody,aerofoil,offset)
+function [aerofoil,aftBody,success,reason] = bodyfoil(aftBody,aerofoil,offset)
 
 %% Get body normals for line-plane intersection (wing-body intersection)
 % Bring in point matrix and x,y,z coordinates of body
@@ -110,7 +110,6 @@ for i=1:numAerofoils
 %             aerofoil.Points = foil;
 %             plotter({aftBody.Points,aerofoil.Points});
             
-            allPoints = [];
             success = false;
             return
         end
@@ -227,9 +226,10 @@ end
 % Discretise aerofoils based on target length
 aerofoil = discwing(aerofoil);
 
-[~,dim,~] = size(aerofoil.Points);
-allWing = [nan(1,dim,3); aerofoil.Points; nan(1,dim,3)];
-
-allPoints = [bodyUpper, allWing, bodyLower];
+% Old allPoints method
+% [~,dim,~] = size(aerofoil.Points);
+% allWing = [nan(1,dim,3); aerofoil.Points; nan(1,dim,3)];
+% 
+% allPoints = [bodyUpper, allWing, bodyLower];
 
 success = true;

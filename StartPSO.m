@@ -1,8 +1,5 @@
 %% Start Particle Swarm Optimiser
 
-% Initialise problem specific parameters, adds them to overall workspace
-initialise();
-
 tic
 
 % Swarm size (must be divisible by 2 & 3 for global best and mutation
@@ -33,38 +30,14 @@ if nFun == 1 % Use Single-Objective Algorithm
     % [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
     
     % Smarter Single-Objective PSO Algorithm
-    [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
-
+    [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,options);
+    
 else % Use Multi-Objective Algorithm
     
     inv = false(1,nFun);
     maxPF = 100; % Maximum number of Pareto Front values
     
-    [GlobalBestFit,GlobalBestPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
-end
-
-% If running on cluster, close down parallel loop
-if cluster
-    delete(gcp('nocreate'));
+    [GlobalBestFit,GlobalBestPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,options);
 end
 
 time = toc;
-
-% configInputs variable required for postprocess function
-configInputs = GlobalBestPos;
-
-% Save global best history/pareto front figure and workspace in current directory
-if nFun == 1
-    
-    saveas(gcf,[resultPath '\GlobalBestHistory'])
-else
-    saveas(gcf,[resultPath '\ParetoFront'])
-end
-
-save(fullfile(resultPath, 'OptimisationResults'))
-
-% Use this function to create output plots/results for arbitrary configs, 
-% will not work for cluster simulations
-if ~cluster
-    postprocess
-end

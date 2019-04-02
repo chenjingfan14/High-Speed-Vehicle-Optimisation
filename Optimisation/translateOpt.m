@@ -8,8 +8,8 @@ preVar = 0;
 
 condCell = cell(rows-1,6);
 
-var1 = [];
-var2 = [];
+var1 = 0;
+var2 = 0;
 
 % Grab titles
 for i=cols:-1:1
@@ -68,29 +68,16 @@ for i = 2:rows
             target = (preVar + 1) : nVar;
             
             % Assign current variables to complete variable array in
-            % correct position
-            if preVar == 0
-                
-                varArray(1,:) = name;
-                var1(1,:) = val;
-            else
-                
-                varArray(target,:) = name;
-                var1(target,:) = val;
-            end
+            % correct position    
+            varArray(target,:) = name;
+            var1(target,:) = val;
   
         elseif j == 2
             
             % As above however target has already been calculated, and
             % varArray has been assigned already. Here only assigning
             % complete maximum variable array (if applicable)
-            if preVar == 0
-                
-                var2(1,:) = val;
-            else
-                
-                var2(target,:) = val;
-            end
+            var2(target,:) = val;
         end
     end
     

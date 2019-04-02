@@ -27,11 +27,14 @@ classdef wingtail
         Control
         TrailingEdge = false;
         Boolean
+        L
+        H
+        K
         
     end
     
     methods
-        function obj=wingtail(dihedral,semispan,chord,TEsweep,sections,control)
+        function obj=wingtail(dihedral,semispan,chord,TEsweep,sections,xNorm,control)
             
             % If any aerofoil section span = 0, delete all corresponding partition
             % properties
@@ -52,8 +55,6 @@ classdef wingtail
             
             %%
             
-            xPanels = obj.xPanels;
-            X = (0:xPanels)';
             nParts = sum(semispan > 0);
             nSecs = nParts + 1;
             
@@ -97,33 +98,45 @@ classdef wingtail
             end
             
             %% Wing x-distribution
-            switch picker
-                case "Linear"
-                    xNorm = X/max(X);
-                case "Cosine"
-                    xNorm = 0.5*(1-cos((X*pi)/max(X)));
-                case "HalfCosine"
-                    xNorm = 1-cos((X*(pi/2))/max(X));
-            end
-            
-            %% Aerofoil Section & Wingbox x-Discretisation
-            
-            [foilUp,foilLo] = deal(zeros(numel(xNorm),nSecs));
-            
-            for i=1:nSecs
+              
+            for i=nSecs:-1:1
                 
                 Sec = sections{i};
                 
                 dim = size(Sec,1);
                 half = ceil(dim/2);
-                                
-                upper = unique(Sec(1:half,:),'stable','rows');
-                lower = unique(Sec(half:dim,:),'stable','rows');
                 
-                % Interpolate z given section xz coords and defined 
-                % x-discretisation 
-                foilUp(:,i) = interp1(upper(:,1),upper(:,2),xNorm,'pchip'); % interpolates sample data wrt defined chorwise points
-                foilLo(:,i) = interp1(lower(:,1),lower(:,2),xNorm,'pchip');
+                if isequal(Sec(half:end,1),xNorm)
+                
+                    foilUp(:,i) = flip(Sec(1:half,2));
+                    foilLo(:,i) = Sec(half:dim,2);
+                else
+                    xPanels = 50;
+                    X = (0:xPanels)';
+                    
+                    switch obj.Distribution
+                        
+                        case "Linear"
+                            
+                            xNorm = X/max(X);
+                            
+                        case "Cosine"
+                            
+                            xNorm = 0.5*(1-cos((X*pi)/max(X)));
+                            
+                        case "HalfCosine"
+                            
+                            xNorm = 1-cos((X*(pi/2))/max(X));
+                    end
+                    
+                    upper = unique(Sec(1:half,:),'stable','rows');
+                    lower = unique(Sec(half:dim,:),'stable','rows');
+                    
+                    % Interpolate z given section xz coords and defined
+                    % x-discretisation
+                    foilUp(:,i) = interp1(upper(:,1),upper(:,2),xNorm,'pchip'); % interpolates sample data wrt defined chorwise points
+                    foilLo(:,i) = interp1(lower(:,1),lower(:,2),xNorm,'pchip');
+                end
             end
             
             %% Control surfaces
@@ -156,7 +169,7 @@ classdef wingtail
                 
                 foilLo = [foilLo, controlFoilLo];
                 foilLo = foilLo(:,IDorder);
-                 
+                
                 % Including control spans into full config and sorting
                 bh = bhSort;
                 
@@ -170,7 +183,7 @@ classdef wingtail
                 % Remove duplicate control surface chords from control
                 % surface so that one (non-control surface) is lofted into
                 % the other (begin/end control surface)
-                controlSurf([first last]) = false; 
+                controlSurf([first last]) = false;
                 
                 [~,ID] = min(abs(control(3) - xNorm));
                 
@@ -222,7 +235,7 @@ classdef wingtail
                 points = [wingUpper, fliplr(wingLower)];
                 obj.Name = "wing";
             end
-
+            
             obj.Chord = chord;
             obj.WetChord = chord;
             obj.Span = semispan;

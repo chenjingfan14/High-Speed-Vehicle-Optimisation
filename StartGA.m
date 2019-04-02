@@ -1,8 +1,5 @@
 %% Start Genetic Algorithm
 
-% Initialise problem specific parameters, adds them to overall workspace
-initialise();
-
 tic
 
 %% Main GA program (Only single-objective currently available)
@@ -24,31 +21,6 @@ Pc = 0.95;      % Probablility of crossover
 Pm = 1/nVar;    % Probability of mutation 
 Er = 0.2;       % Elitism ratio 
 
-[GlobalBestFit,GlobalBestPos,history] = GeneticAlgorithm(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,Pc,Pm,Er,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
-
-%% Begin post-processing
-% If running on cluster, close down parallel loop
-if cluster
-    delete(gcp('nocreate'));
-end
+[GlobalBestFit,GlobalBestPos,history] = GeneticAlgorithm(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,Pc,Pm,Er,nFun,inv,fi,options);
 
 time = toc;
-
-% configInputs variable required for postprocess function
-configInputs = GlobalBestPos;
-
-% Save global best history/pareto front figure and workspace in current directory
-if nFun == 1
-    
-    saveas(gcf,[resultPath '\GlobalBestHistory'])
-else
-    saveas(gcf,[resultPath '\ParetoFront'])
-end
-
-save(fullfile(resultPath, 'OptimisationResults'))
-
-% Use this function to create output plots/results for arbitrary configs, 
-% will not work for cluster simulations
-if ~cluster
-    postprocess
-end
