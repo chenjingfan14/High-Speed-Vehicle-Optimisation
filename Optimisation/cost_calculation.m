@@ -15,23 +15,30 @@ if wing
     if baseline
         
         base = options.Base;
-        baseResults = options.Base.Results;
+        baseResults = base.Results;
+        baseParameters = base.Parameters;
         
-        constrain = [min(parameters.Sweep),results.Mbar,results.copBar,results.Lbar];
-        minVal = [0,0,0,baseResults.Lbar];
-        maxVal = [80,baseResults.Mbar,baseResults.copBar,inf];
+        constrain = [parameters.Aref/2, parameters.Wingspan, ...
+            min(parameters.Sweep), max(parameters.Sweep), results.Mbar, ...
+            results.copBar, results.Lbar, max(parameters.ThicknessND), max(parameters.Thickness)];
+        
+        minVal = [baseParameters.Aref*0.5, 0, 0, 0, 0, 0, baseResults.Lbar, 0, 0];
+        
+        maxVal = [baseParameters.Aref*2, baseParameters.Wingspan, 80, 80, baseResults.Mbar, ...
+            baseResults.copBar, baseResults.Lbar*10, max(baseParameters.ThicknessND), max(baseParameters.Thickness)];
     else
         constrain = [results.Mbar,results.copBar];
         minVal = [0,0];
-        maxVal = [inf,0.6];
+        maxVal = [inf,inf];
     end
     
     penalty = violation(constrain,minVal,maxVal);
     
     % Check magnitude of penalty
-    %     if any(penalty)
-    %         penalty
-    %     end
+%     if ~any(penalty)
+%         
+%         penalty
+%     end
     
     %% Costs
     % Varies automatically depending on number of cost functions defined in
@@ -40,7 +47,8 @@ if wing
     if nFun == 2
         
         % Multi-objective
-        cost = [1/results.Lbar,results.Cdbar] + penalty;
+%         cost = [1/results.Lbar, results.Cdbar] + penalty;
+        cost = [-results.Clbar, results.Cdbar] + penalty;
         
     elseif nFun == 1
         
@@ -50,12 +58,6 @@ if wing
     else
         error(['No option for ' num2str(nFun) ' cost functions'])
     end
-    
-    % If any cost less than zero, particle swarm will see it as optimal,
-    % whereas none of these aerodynamic values should be less than zero
-    infCon = cost < 0;
-    
-    cost(infCon) = inf;
 else
     cost = [];
 end

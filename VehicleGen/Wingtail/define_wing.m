@@ -7,11 +7,11 @@ n = options.WingPartitions;
 wingDefs = {...
     "Variables",            "VarMin",           "VarMax",   "Conditions",               "Transformations",      "Optimise/Hold"
     "Dihedral",             0,                  20,         "~",                        "~",                    "Optimise";
-    "Chord",               [0.1,0.1,0.1,0.1],  [1,1,1,1],   "< Previous",               ".*AftLength",          "Optimise";
-    "TESweep",             [-20,-20,-20],      [20,20,20],  "~"                         "~",                    "Optimise";
-    "Semispan",            [0,0,0],            [5,5,5],    ["Minimum 0.5" "sum > 2"],   "~",                    "Optimise";
-    "xOffset",             -0.25,               0.5,        "~",                        ".*AftLength",          "Optimise";
-    "zOffset",             -0.5,                0,          "~",                        ".*AftHalfHeight",      "Optimise"};
+    "Chord",               [0.1,0.1,0.1],      [1,1,1],     "< Previous",               ".*AftLength",          "Optimise";
+    "TESweep",             [-20,-20],          [20,20],     "~"                         "~",                    "Optimise";
+    "Semispan",            [2,1],              [5,5],      ["Minimum 0.5" "sum > 2"],   "~",                    "Optimise";
+    "xOffset",             -0.25,               0.5,        "~",                        ".*AftLength",          "Hold";
+    "zOffset",             -0.5,                0,          "~",                        ".*AftHalfHeight",      "Hold"};
 
 wingDefs = optorhold(wingDefs);
 

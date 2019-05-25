@@ -9,10 +9,18 @@ R = 287;
 
 % Should Ae values be Ainf??
 Pe = flow.Pinf;
+Minf = flow.Minf;
 Me = flow.Minf;
 mu = flow.mu;
 a = flow.a;
 Ve = Me*a;
+Tinf = flow.Tinf;
+
+% Mach 2 X-34
+% Tinf = 325 - 272.594;
+% Mach 6 X-34
+% Tinf = 114 - 272.594;
+
 Te = flow.Tinf;
 gamma = flow.gamma;
 S = 110;
@@ -57,11 +65,21 @@ for i = 1:numel(partStruct)
     
     Tt = Te*(1 + (gamma - 1)*((Me^2)/2));
     
+    T0 = Tinf*(1 + ((gamma-1)/2)*Minf^2);
+    
     Tr = r*(Tt - Te) + Te;
-    Tw = Tr;
+    
+    % Pretty sure this is wrong
+    % Tw = Tr;
+    
+    % Assume adiabatic wall T
+    Tw = r*(T0 + Te) + Te;
     
     % Original Eckert's reference temperature method
     Tref = Te * (1 + 0.032*(Me^2) + 0.58*((Tw/Te) - 1));
+    
+    % Thermoelastic Formulation of a Hypersonic Vehicle Control Surface for Control-Oriented Simulation
+    Tref = Te + 0.5*(Tw - Te) + 0.22*(Tr - Te);
     
     % Meador-Smart reference temperature method - Laminar
     % Tref = Te * (0.45 + 0.55*(Tw/Te) + 0.16*r*((gamma - 1)/2) * Me^2);
@@ -80,7 +98,12 @@ for i = 1:numel(partStruct)
     cf = (0.37./(log(ReRefx).^2.584)) .* area/Aref;
     % Equation from above ref
     % cf = (0.0592./(ReRefx.^0.2)) .* area/Aref;
+    % Hypersonic and high-temperature gas dynamics (Meador-Smart)
+    cf = 0.02296./((ReRefx).^0.139) .* area/Aref;
     
+    cf = 0.02296./((ReRefx).^0.139) .* area/Aref;
+    
+    % Mangler factor for conical bodies
     if con
         partCdf = 3^0.5 * sum(cf(:));
     else

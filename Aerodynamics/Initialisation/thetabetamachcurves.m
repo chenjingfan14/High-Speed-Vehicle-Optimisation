@@ -1,14 +1,22 @@
-% function maxTheta = thetaBetaMachCurve(M)
+function [thetaBetaM,maxThetaBetaM] = thetabetamachcurves(Mach,beta)
 
-Mach=1.01:0.01:20;
+if nargin < 1
+    
+    Mach = 1.01:0.01:20;
+end
+
+if nargin < 2
+    
+    beta = 0:0.0001:pi/2;
+end
+
 dim = length(Mach);
 thetaMax = zeros(size(Mach));
-beta = 0:0.01:pi/2;
 
 id = zeros(size(Mach));
 theta = zeros(dim,length(beta));
 
-for i=1:length(Mach)
+for i = 1:length(Mach)
 
     M = Mach(i);
 
@@ -25,4 +33,6 @@ beta = [NaN; beta'];
 thetaM = [Mach; theta']; 
 thetaBetaM = [beta, thetaM];
 
-maxThetaBetaM = [Mach; thetaMax; betaMax]; 
+maxThetaBetaM = [Mach; thetaMax; betaMax]';
+
+save('thetaBetaCurves','thetaBetaM','maxThetaBetaM')

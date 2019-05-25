@@ -1,4 +1,4 @@
-function [Cp,Mach,P] = newtonianprandtlmeyer(partProp,del,impact,meandel,Cp,Mach,P,flow,PrandtlMeyer,thetaBetaM,maxThetaBetaM,conical)
+function [Cp,Mach,P] = newtonianprandtlmeyer(ID,stream,del,prev,impact,Cp,Mach,P,flow,pmFun,maxThetaBetaM)
 
 % Use Newtonian method if inclination is greater than Prandtl-Meyer
 % matching angle
@@ -13,7 +13,7 @@ if any(newt(:))
     Cp(newt) = newtCp;
     Mach(newt) = newtMach;
     P(newt) = newtP;
-end 
+end
 
 % First panel seeing flow (ie previous is freestream or Cp = 0) must have
 % Newtonian/oblique shock solution if it is impacted by flow. Solution to
@@ -27,7 +27,7 @@ if any(tangFirstPanel)
     tang(2,:) = tangFirstPanel;
     impactdel = del(tang);
     
-    [tangCp,tangMach,tangP] = tangentobliqueshock(impactdel,flow,thetaBetaM,maxThetaBetaM,conical);
+    [tangCp,tangMach,tangP] = tangentobliqueshock(impactdel,flow,thetaBetaM,maxThetaBetaM);
     Cp(tang) = tangCp;
     Mach(tang) = tangMach;
     P(tang) = tangP;
@@ -38,10 +38,8 @@ else
 end
 
 if any(pm(:))
-    [pmCp,pmMach,pmP] = prandtlmeyer(del,pm,Cp,Mach,P,flow,PrandtlMeyer);
-    Cp(pm) = pmCp;
-    Mach(pm) = pmMach;
-    P(pm) = pmP;
+    
+    [Cp,Mach,P] = prandtlmeyer(ID,stream,del,prev,pm,Cp,Mach,P,flow,pmFun);
 end
 
 Cp = Cp(impact);

@@ -17,9 +17,6 @@ fi = maxIt; % Display Pareto Front evey fi iterations
 %% Main PSO program
 if nFun == 1 % Use Single-Objective Algorithm
     
-    % If opt cost function value = max(f(x)) (rather than min) then can use
-    % this to invert CF values for display purposes
-    inv = false;
     % Max and min inertial values
     wmax = 0.8;
     wmin = 0.1;
@@ -27,17 +24,16 @@ if nFun == 1 % Use Single-Objective Algorithm
     maxStall = 50;
     
     % Simplest Single-Objective PSO Algorithm
-    % [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
+    % [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,neg,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options);
     
     % Smarter Single-Objective PSO Algorithm
-    [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,options);
+    [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,fi,options);
     
 else % Use Multi-Objective Algorithm
-    
-    inv = false(1,nFun);
+
     maxPF = 100; % Maximum number of Pareto Front values
     
-    [GlobalBestFit,GlobalBestPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,options);
+    [GlobalBestFit,GlobalBestPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,fi,options);
 end
 
 time = toc;

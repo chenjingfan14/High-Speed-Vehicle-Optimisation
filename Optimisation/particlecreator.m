@@ -37,7 +37,7 @@ if Aft
     
     aftbodyHeight = aftbody.Height;
     aftbodyWidth = aftbody.Width;
-    
+
     parameters.ForeL = noseForeLength;
     parameters.AftL = aftBodyLength;
     parameters.BodyL = noseForeLength + aftBodyLength;
@@ -61,11 +61,11 @@ if Aft
     forebody = foreGen(foreBodyLength,nosePoints,radial,0.5);
     
     body = [nosePoints(1:end-1,:,:); forebody.Points(1:end-1,:,:); aftbody.Points];
-    bodyPoints = normals(body);
+    bodyPoints = normals(body,Viscous,options.Quad);
     
     if Viscous
         
-        bodyPoints.L = fsiinterpolation(bodyPoints);
+        bodyPoints.L = fsiinterpolation(options.RBFfun,bodyPoints);
     
         fricData{1} = bodyPoints;
     else
@@ -292,11 +292,11 @@ for i=wingDim:-1:1
         
     end
     
-    liftSurfPoints = normals(liftSurface.Points);
+    liftSurfPoints = normals(liftSurface.Points,Viscous,options.Quad);
     
     if Structure
     
-        [L, H, K] = fsiinterpolation(liftSurfPoints,liftSurface.Skin);
+        [L, H, K] = fsiinterpolation(options.RBFfun,liftSurfPoints,liftSurface.Skin);
     
         liftSurface.L = L;
         liftSurface.H = H;
@@ -306,14 +306,14 @@ for i=wingDim:-1:1
     
     elseif Viscous
        
-        L = fsiinterpolation(liftSurfPoints);
+        L = fsiinterpolation(options.RBFfun,liftSurfPoints);
         liftSurfPoints.L = L;
     end
     
     if Viscous
         
-        %         j = length(fricData) + 1;
-        j = 1;
+%         j = 1;
+        j = length(fricData) + 1;
         fricData{j,1} = liftSurfPoints;
     else
         fricData = [];
@@ -336,10 +336,12 @@ if Wing
     
     sumArea = sum(wing.Area);
     
-    parameters.MAC = sum(wing.Area.*wing.MAC)/sumArea;
+    parameters.MAC = sum(wing.WetArea.*wing.WetMAC)/sumArea;
     parameters.Aref = sumArea*2;
     parameters.Wingspan = sum(wing.Span);
     parameters.Sweep = wing.LESweep;
+    parameters.ThicknessND = wing.ThicknessND; 
+    parameters.Thickness = wing.Thickness;
     
 else
     
@@ -351,6 +353,10 @@ else
     parameters.wingspan = [];
     
 end
+
+% X-34 parameters
+% parameters.Aref = 33.213;
+% parameters.MAC = 4.4323;
 
 %% Put assembly into single cell, delete any empty parts
 assemblyProperties = {Nose,forebody,aftbody,liftSurfaces};

@@ -17,7 +17,7 @@ di = wing.Dihedral;
 
 skinThick = skin.Thickness;
 
-DoF = 6;
+DoFelement = 6;
 
 E = 70e9;
 v = 0.29;
@@ -121,14 +121,13 @@ Fs = H' * force(:);
 
 % Rearrange wing spanwise wrap to wingbox chordwisel wrap
 [row,col,~] = size(M);
-dim = row*col*3;
 
 F = reshape(Fs,row,col,3);
 
 halfCol = ceil(col/2);
 
 origID = zeros(row, col, 3);
-origID(:) = 1:dim;
+origID(:) = 1:row*col*3;
 
 transID = [origID(:, 1:halfCol, :); rot90(origID(:, halfCol + 1:end, :),2)];
 
@@ -289,14 +288,17 @@ for i = chordBeams:-1:1
 end
 
 %% Assemble load vector
-xForce = 1:DoF:dim*2;
+nodes = numel(boxNode1(:,:,1));
+DoFtotal = nodes * DoFelement;
+
+xForce = 1:DoFelement:DoFtotal;
 yForce = xForce + 1;
 zForce = yForce + 1;
 xMoment = zForce + 1;
 yMoment = xMoment + 1;
 zMoment = yMoment + 1;
 
-[loads,qf] = deal(zeros(dim*2,1));
+[loads,qf] = deal(zeros(DoFtotal,1));
 
 % Check order in which these are being applied to load vector
 loads(xForce) = F(:,:,1);
@@ -307,18 +309,16 @@ loads(yMoment) = M(:,:,2);
 loads(zMoment) = M(:,:,3);
 
 % Complete circle so number of node 1s = number of total nodes
-nodes = numel(boxNode1(:,:,1));
-dim = nodes * DoF;
-globalStiffnessMatrix = zeros(dim,dim,1);
-ID = dim - (DoF * 2) + 1: dim;
+globalStiffnessMatrix = zeros(DoFtotal,DoFtotal,1);
+ID = DoFtotal - (DoFelement * 2) + 1: DoFtotal;
 
 % Matrix position arrays for local matrices
-locBegin = 1:DoF;
-locEnd = locBegin + DoF;
+locBegin = 1:DoFelement;
+locEnd = locBegin + DoFelement;
 
 for i = nSecs:-1:1
     
-    init = (i-1)*dim/nSecs + 1;
+    init = (i-1)*DoFtotal/nSecs + 1;
     
 %     kBox = elementalStiffnessMatrices(chordAE_L(:,i),chordE12_L3(:,i),chordE6_L2(:,i),...
 %         chordGJ_L(:,i),chordE4_L(:,i),chordE2_L(:,i),chordIy(:,i),chordIz(:,i),...
@@ -328,6 +328,10 @@ for i = nSecs:-1:1
         chordGJ_L(:,i),chordE4_L(:,i),chordE2_L(:,i),chordIy,chordIz,...
         boxlmn1(:,i,:),boxlmn2(:,i,:),boxlmn3(:,i,:));
     
+    % Test to check if all local stiffness matrices are symmetric and
+    % positive definite
+    flag = checkstiffnessmatrix(kBox);
+    
     % Mid partitions will have two spar sets interefering, root and tip
     % only one
     if i ~= 1
@@ -336,6 +340,8 @@ for i = nSecs:-1:1
             spanGJ_L(:,i-1),spanE4_L(:,i-1),spanE2_L(:,i-1),spanIy,spanIz,...
             sparlmn1(:,i-1,:),sparlmn2(:,i-1,:),sparlmn3(:,i-1,:));   
     end
+    
+    flag = checkstiffnessmatrix(kSpar);
     
     for j = chordBeams:-1:1
         
@@ -347,8 +353,8 @@ for i = nSecs:-1:1
             
             %% Check spar connections here, potentially wrong nodes being selected
             % outboardNode = ID(1:DoF+1); % Never used?
-            outboardNode = ID(DoF+1:end);
-            inboardNode = outboardNode - dim/nSecs;
+            outboardNode = ID(DoFelement+1:end);
+            inboardNode = outboardNode - DoFtotal/nSecs;
             
 %             globalStiffnessMatrix(inboardNode,inboardNode,:) = ...
 %                 globalStiffnessMatrix(inboardNode,inboardNode,:) + kSparj(locBegin,locBegin,:);
@@ -365,7 +371,7 @@ for i = nSecs:-1:1
             
         if j == chordBeams
             
-            boxBegin = init:init + DoF - 1;
+            boxBegin = init:init + DoFelement - 1;
             boxEnd = ID(7:12);
             
             globalStiffnessMatrix(boxEnd,boxEnd,:) = ...
@@ -382,18 +388,24 @@ for i = nSecs:-1:1
             
         elseif j == 1
             
-            ID = ID - DoF * 2;
+            ID = ID - DoFelement * 2;
         else
             globalStiffnessMatrix(ID,ID,:) =  globalStiffnessMatrix(ID,ID,:) + localStiffnessMatrix;
-            ID = ID - DoF;
+            ID = ID - DoFelement;
         end
     end
 end
 
 %% Solve system of linear equations
 % First set of nodes at root are fixed, rest free
-unconstrained = nodes/nSecs * DoF + 1 : dim;
-qf(unconstrained) = globalStiffnessMatrix(unconstrained,unconstrained,:)\loads(unconstrained);
+unconstrained = nodes/nSecs * DoFelement + 1 : DoFtotal;
+
+opts.SYM = true;
+
+% Check if stiffness matrix is positive definite
+% [~,p] = chol(globalStiffnessMatrix);
+
+qf(unconstrained) = linsolve(globalStiffnessMatrix(unconstrained,unconstrained,:),loads(unconstrained),opts);
 
 % globalStiffnessMatrix(unconstrained,unconstrained,:) = globalStiffnessMatrix(unconstrained,unconstrained,:)*10;
 % qf = globalStiffnessMatrix\loads;

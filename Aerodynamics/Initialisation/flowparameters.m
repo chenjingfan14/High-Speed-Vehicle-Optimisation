@@ -1,31 +1,39 @@
 function flow = flowparameters(inputs)
 %% Flow conditions for all flight states
-
-alpha = inputs.Alpha;
-Mach = inputs.Mach;
-alt = inputs.Altitude;
-delta = inputs.Delta;
-control = inputs.Control;
-
-%% Check if inputs have been provided
+% Check if inputs have been provided
 % If so, bypass. If not, give pre-determined values
-if isempty(alpha)
+if isfield(inputs,'Alpha')
 
+    alpha = inputs.Alpha;
+else
     alpha = (-4:4:24)';
 end
 
-if isempty(Mach)
+if isfield(inputs,'Mach')
 
+    Mach = inputs.Mach;
+else
     Mach = [4.63]';
 end
 
-if isempty(alt)
+if isfield(inputs,'Altitude')
 
+    alt = inputs.Altitude;
+else
     alt = [32850]';
 end
 
-if control && isempty(delta)
+if isfield(inputs,'Control') 
+    
+    control = inputs.Control;
+else
+    control = false;
+end
 
+if isfield(inputs,'Delta')
+    
+    delta = inputs.Delta;
+else
     delta = [0]';
 end
 
@@ -42,18 +50,19 @@ deltaPlot = ['Control Surface Deflection (' char(176) ')'];
 plotOrder = [alphaPlot, "Mach", "Altitude (ft)", deltaPlot];
 
 % How many analysis points of each parameter
-alphaDim = numel(alpha);
-MinfDim = numel(Mach);
+[alphaDim, alphaSets] = size(alpha);
+MachDim = numel(Mach);
 altDim = numel(alt);
 
 if control % Same as above
+    
     deltaDim = numel(delta);
 else % Set to one so that it stays at the end and can be removed
     deltaDim = 1;
 end
 
 % Initial order (as above)
-matIndex = [alphaDim,MinfDim,altDim,deltaDim];
+matIndex = [alphaDim,MachDim,altDim,deltaDim];
 
 % Sort parameters from most analysis points to least. For example if only
 % one Mach number is desired but 3 altitudes, better to output graphs in
@@ -67,49 +76,78 @@ plotOrder = plotOrder(order);
 % Using new running order, create all flight state combinations and fill 
 % with respective parameter value (Alpha, Mach, etc)
 
-% Number of variable flight conditions
-dim = numel(flightStateOrder);
-
-% Produces all index combinations of flight states
-flightStateIndex = fullfact(matIndex);
-% Initialise all flight state parameter combinations
-[row,col] = size(flightStateIndex);
-flightStates = zeros(row,col);
-
 dim3Multi = 1;
-for i = 1:dim
-    switch flightStateOrder(i)
-        case "Alpha"
-            paramFill = alpha(flightStateIndex(:,i));
-            alphaCol = i;
-        case "Mach"
-            paramFill = Mach(flightStateIndex(:,i));
-            MachCol = i;
-        case "Altitude"
-            paramFill = alt(flightStateIndex(:,i));
-            altCol = i;
-        case "Delta"
-            paramFill = delta(flightStateIndex(:,i));
-            deltaCol = i;
-    end
+
+if alphaSets > 1
     
-    flightStates(:,i) = paramFill;
+    % Use for experimental comparisons where angle of attack may be
+    % different across different Mach/altitude experiments
+    flightStates(:,1) = alpha(:);
+    flightStateIndex(:,1) = 1:(alphaDim * alphaSets);
     
-    % Any dimensions >= 3 must be combined to produce 2D graphs (with 
-    % combined third dimension being number of 2D graphs for each set of 
-    % data)
-    if i >= 3
-       
-       dim3Multi = dim3Multi * matIndex(i);
-       
-    end
+    MachSets = repmat(reshape(Mach,1,[]),alphaDim,1);
+    altSets = repmat(reshape(alt,1,[]),alphaDim,1);
+    id = repmat(1:MachDim,alphaDim,1);
+    
+    flightStates(:,[2 3]) = [MachSets(:) altSets(:)];
+    flightStateIndex(:,[2 3]) = [id(:) id(:)];
+    
+    [row,~] = size(flightStates);
+    
+    alphaCol = 1;
+    MachCol = 2;
+    altCol = 3;
+    deltaCol = 4;
+    
+else
+    % Number of variable flight conditions
+    dim = numel(flightStateOrder);
+    
+    % Produces all index combinations of flight states
+    flightStateIndex = fullfact(matIndex);
+    
+    % Initialise all flight state parameter combinations
+    [row,col] = size(flightStateIndex);
+    flightStates = zeros(row,col);
+    
+    for i = 1:dim
+        switch flightStateOrder(i)
+            case "Alpha"
+                paramFill = alpha(flightStateIndex(:,i));
+                alphaCol = i;
+            case "Mach"
+                paramFill = Mach(flightStateIndex(:,i));
+                MachCol = i;
+            case "Altitude"
+                paramFill = alt(flightStateIndex(:,i));
+                altCol = i;
+            case "Delta"
+                paramFill = delta(flightStateIndex(:,i));
+                deltaCol = i;
+        end
+        
+        flightStates(:,i) = paramFill;
+        
+        % Any dimensions >= 3 must be combined to produce 2D graphs (with
+        % combined third dimension being number of 2D graphs for each set of
+        % data)
+        if i >= 3
+            
+            dim3Multi = dim3Multi * matIndex(i);
+        end
+    end   
 end
 
 % Remove control parameters if no control specified
 if ~control
     flightStateOrder(deltaCol) = [];
-    flightStateIndex(:,deltaCol) = [];
-    flightStates(:,deltaCol) = [];
+    
+    if alphaSets == 1
+        
+        flightStateIndex(:,deltaCol) = [];
+        flightStates(:,deltaCol) = [];
+    end
+    
     deltaCol = [];
 end
 
@@ -125,7 +163,7 @@ Pinf_P0 = (2./((gamma+1)*(Mach.^2))).^(gamma/(gamma-1)) .* (((2*gamma*(Mach.^2))
 
 % Matching points for Newtonian + Prandtl-Meyer method
 % CHECK: reasonable results for all Mach numbers?
-for i = MinfDim:-1:1
+for i = MachDim:-1:1
     [matchdel(i,:),matchMach(i,:)] = matchingPoint(gamma,Pinf_P0(i));
 end
 
@@ -164,5 +202,7 @@ flow.Pr = Pr(flightStateIndex(:,altCol));
 flow.rho = rho(flightStateIndex(:,altCol));
 flow.mu = mu(flightStateIndex(:,altCol));
 flow.a = a(flightStateIndex(:,altCol));
+flow.Uinf = flow.Minf .* flow.a;
+flow.q = 0.5 * flow.rho .* flow.Uinf.^2;
 flow.delq = matchdel(flightStateIndex(:,MachCol));
 flow.Machq = matchMach(flightStateIndex(:,MachCol));

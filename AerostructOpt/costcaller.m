@@ -14,6 +14,12 @@ n = options.WingPartitions;
 
 switch aerofoilMethod
     
+    case {"Parsec","PARSEC"}
+        
+    pcoeffs = parseccopy(parPos,varArray,n,nPop);    
+    
+    
+    
     case "BP3434"
 
     chordDisc = options.ChordDisc;

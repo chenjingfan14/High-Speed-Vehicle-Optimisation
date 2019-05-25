@@ -15,7 +15,9 @@ MAC = parameters.MAC;
 % Takes section properties and outputs point matrices, number of parts,
 % whether part is part of body, and prediction methods to be used for every
 % section
-[points,properties,bodyPart,partType,impactMethod,shadowMethod] = flowfinder(properties);
+[points,properties,bodyPart,partType,impactMethod,shadowMethod] = flowfinder(properties,options);
+
+% plotter(points,"double");
 
 tot = numel(properties); % Total number of parts
 
@@ -25,7 +27,7 @@ initMatrix = zeros(dim);
 
 wingPressure = cell(dim);
 
-numFoils = 1:sum(~bodyPart); % Total number of aerofoils
+numFoils = sum(~bodyPart); % Total number of aerofoils
 
 % Initialise pressure coffiecient cells for body and aerofoils
 [bodyCp,bodyForce,bodyRadLoc,copCell] = deal(cell(dim));
@@ -36,7 +38,6 @@ foilCp = cell(dim(1),dim(2),numFoils);
 shielding = options.Shielding;
 viscous = options.Viscous;
 control = options.Control;
-baseline = options.Baseline;
 structures = options.Structure;
 
 thetaBetaM = options.ThetaBetaM;
@@ -56,15 +57,18 @@ for i=1:runs
     Pinf = run.Pinf;
     rho = run.rho;
     
+    Uvec = run.U;
+    Unorm = Uvec/Uinf;
+    
     xyAngle = run.planeAngles(1);
     xzAngle = run.planeAngles(2);
     yzAngle = run.planeAngles(3);
-        
+    
     if i == 1 || Minf ~= MinfPrev
         % Find maximum compression angle for which attached shock solution exists
         % for free stream Mach number
-        loc = Minf == options.MaxThetaBetaM(1,:);
-        maxThetaInf = options.MaxThetaBetaM(2,loc);
+        loc = Minf == options.MaxThetaBetaM(:,1);
+        maxThetaInf = options.MaxThetaBetaM(loc,2);
     end
     
     if viscous && (i == 1 || alpha ~= alphaPrev)
@@ -88,46 +92,81 @@ for i=1:runs
     
     xyzCp = zeros(tot,3);
     
-    % Used for combining nose/forebody/aftbody flow characteristics
-    % together
-    bodyOff = 0;
-    
     % Rotates points by angle of attack, with mean aerodynamic chord used
     % as origin
-    rotPoints = rotate(points,MAC,alpha);
+    % rotPoints = rotate(points,MAC,alpha,options.Quad);
     
     % Initialise shield upper and lower boundaries
     foilCount = 1;
     [yzUpBound,yzLoBound] = deal([0,0]);
     [cellCp,cellForce,cellRadLoc] = deal(cell(1));
     
+    streamline = [];
+    
     count = 1;
     colCp = 0;
     
-    %     plotter(rotPoints,"impact")
+    %% Streamline/Friction calculation
+    if viscous
+        %         if partProp.Name == "nose"
+        %             rot = (alpha*pi/180) + partProp.Rotation;
+        %         else
+        %             rot = 0;
+        %         end
+        
+        streamline = streamlineslow(fricData, run);
+        %         fricData = cornervelocities(fricData, run);
+        
+        %         intstreamline(fricData,run);
+        
+        % Independent of AoA
+%         Cdf = simplefriction(properties,partType,parameters,run);
+        Cdf = friction(points,bodyPart,Aref,run);
+    else
+        Cdf = 0;
+    end
     
-    for j=1:tot
+    for j = 1:tot
         
         converged = false;
         
         partProp = properties{j};
         part = points(j);
-        conical = partProp.Conical;
+        
+        if isempty(part) || isempty(partProp)
             
+            continue
+        end
+        
+        if isfield(partProp,'Conical')
+            
+            conical = partProp.Conical;
+        else
+            conical = bodyPart(j);
+        end
+        
         while ~converged
             %% Inner aerodynamic force and moment coefficient prediction loop
-            rotPart = rotPoints(j);
-            radialLocation = rotPart.radialLocation;
+            
+            ID = part.ID;
+            
+            if isempty(streamline)
+                
+                streamline.ID = ID;
+            end
             
             area = part.area; % Area of each panel
-            partdel = rotPart.del;
             
             % Panel unit normals x,y and z
             % Unrotated normals used. Correct?
             unitNorm = part.unitNorm;
             centre = part.centre;
             
-            [row,col] = size(area);
+            del = asin((-Unorm(1) .* unitNorm(:,:,1)) +...
+                (-Unorm(2) .* unitNorm(:,:,2)) +...
+                (-Unorm(3) .* unitNorm(:,:,3)));
+            
+            [row,col] = size(del);
             
             %% Characteristics prior to part
             % If current is part of body, give it the previous body part flow
@@ -136,44 +175,55 @@ for i=1:runs
             % conditions
             if bodyPart(j) && j > 1 % Previous body part conditions
                 
-                cols = (1:col) + bodyOff;
-                prevdel = prevBodyAngle(cols);
-                prevCp = prevBodyCp(cols);
-                prevP = prevBodyP(cols);
-                prevMach = prevBodyMach(cols);
-                bodyOff = bodyOff + cols(end);
+                cols = (1:col) + cols(end);
+                
+                if cols(end) == length(prevBodyAngle) + 1
+                    
+                    cols = cols - 1;
+                end
+                
+                prev.del = prevBodyAngle(cols);
+                prev.Cp = prevBodyCp(cols);
+                prev.P = prevBodyP(cols);
+                prev.Mach = prevBodyMach(cols);
                 
             else % Freestream conditions
                 
-                [prevdel,prevCp] = deal(zeros(1,col));
-                prevP = Pinf*ones(1,col);
-                prevMach = Minf*ones(1,col);
+                [prev.del,prev.Cp] = deal(zeros(1,col));
+                prev.P = Pinf*ones(1,col);
+                prev.Mach = Minf*ones(1,col);
                 
             end
             
-            del = [prevdel; partdel]; % Rotated panels inclination to flow
-            
-            dummy = zeros(row,col);
-            Cp = [prevCp; dummy];
-            P = [prevP; dummy];
-            Mach = [prevMach; dummy];
+            [Cp,P,Mach] = deal(zeros(row,col));
             
             %% Determine if panel is impacted by flow
             % Centre y,z coordinates of each panel
-            
-            prev = false(1,col);
             zeroArea = area <= 0;
-            logicalFlow = rotPart.flow;
+            
+%             logicalFlow = rotPoints(j).flow;
+            logicalFlow = del > 0;            
+            points(j).flow = logicalFlow;
+            
+%             nx = unitNorm(:,:,1);
+%             
+%             logicalFlow = false(row,col);
+%             logicalFlow(zPos) = nx(zPos) < -impactNx;
+%             logicalFlow(~zPos) = nx(~zPos) < impactNx;
+%             points(j).flow = logicalFlow;
             
             if shielding
                 
-                cyRot = rotPart.centre(:,Y);
-                czRot = rotPart.centre(:,Z);
+                cyRot = rotPart.centre(:,:,2);
+                czRot = rotPart.centre(:,:,3);
                 
                 [impact,shadow] = impactshadow(cyRot,czRot,area,prev,logicalFlow,yzUpBound,yzLoBound);
             else
-                impact = [prev; logicalFlow & ~zeroArea];
-                shadow = [prev; ~logicalFlow & ~zeroArea];
+                impact = logicalFlow & ~zeroArea;
+                shadow = ~logicalFlow & ~zeroArea;
+                
+                impact = del > 0 & ~zeroArea;
+                shadow = del <= 0 & ~zeroArea;
             end
             
             %% Impact solver
@@ -186,24 +236,24 @@ for i=1:runs
                 % flow for attached shock must be less than maximum allowable
                 % (assuming front is bluntest part of part for tangent wedge/
                 % cone method), otherwise switch to Newtonian Prandtl-Meyer
-                if iMethod == 4 && any(abs(partdel(:)) > maxThetaInf)
-                    
-                    iMethod = 3;
-                end
-                
-                meandel = mean(abs(partdel(1,:)));
-                
-                if iMethod == 3 && any(meandel > maxThetaInf)
-                    
-                    iMethod = 2;
-                end
-                
-                meandel = meandel*180/pi;
+%                 if iMethod == 4 && any(abs(del(:)) > maxThetaInf)
+%                     
+%                     iMethod = 3;
+%                 end
+%                 
+%                 meandel = mean(abs(del(1,:)));
+%                 
+%                 if iMethod == 3 && any(meandel > maxThetaInf)
+%                     
+%                     iMethod = 2;
+%                 end
+%                 
+%                 meandel = meandel*180/pi;
                 
                 switch iMethod
                     case 1 % Modified Newtonian
                         
-                        [impactCp,impactMach,impactP] = newtonian(partProp,impactdel,meandel,run);
+                        [impactCp,impactMach,impactP] = newtonian(impactdel,run);
                         
                     case 2 % Modified Newtonian + Prandtl-Meyer expansion
                         
@@ -211,21 +261,31 @@ for i=1:runs
                         
                     case 3 % Oblique shock + Prandtl-Meyer expansion
                         
-                        [impactCp,impactMach,impactP] = obliqueshockprandtl(del,impact,Cp,Mach,P,run,PrandtlMeyer,thetaBetaM,maxThetaBetaM,conical);
+%                         [impactCp,impactMach,impactP] = obliqueshockprandtl(ID,streamline.ID,del,impact,area,prev,Cp,Mach,P,run,options.pmFun,maxThetaBetaM);
+                        [impactCp,impactMach,impactP] = obliqueshock(del(impact),run,maxThetaBetaM);
                         
                     case 4 % Tangent wedge/cone
                         
-                        [impactCp,impactMach,impactP] = tangentobliqueshock(impactdel,run,thetaBetaM,maxThetaBetaM,conical);
+%                         [impactCp,impactMach,impactP] = tangentobliqueshock(impactdel,run,thetaBetaM,maxThetaBetaM,conical);
+                        [impactCp,impactMach,impactP] = tangentempirical(impactdel,run,conical);
                 end
                 
-                Cp(impact) = impactCp;
-                Mach(impact) = impactMach;
-                P(impact) = impactP;
+                if isequal(size(impactCp),size(Cp))
+                    
+                    Cp = impactCp;
+                    Mach = impactMach;
+                    P = impactP;
+                else
+                    Cp(impact) = impactCp;
+                    Mach(impact) = impactMach;
+                    P(impact) = impactP;
+                end
             end
             
             %% Shadow solver
             if any(shadow(:))
                 
+                Cpbase = basepressure(Minf,flow.gamma);
                 sMethod = shadowMethod(j);
                 
                 % Initialise shadow panel characteristics as zero arrays
@@ -255,19 +315,26 @@ for i=1:runs
                         % done here
                         
                     case 2 % Prandtl-Meyer expansion
-                        [shadowCp,shadowMach,shadowP] = prandtlmeyer(del,shadow,Cp,Mach,P,run,PrandtlMeyer);
+                        [shadowCp,shadowMach,shadowP] = prandtlmeyer(ID,streamline.ID,del,prev,shadow,Cp,Mach,P,run,options.pmFun,maxThetaBetaM);
                 end
                 
                 Cp(shadow) = shadowCp;
                 Mach(shadow) = shadowMach;
                 P(shadow) = shadowP;
                 
+                con = del < -40*pi/180;
+                
+%                 Cp(con) = Cpbase;
             end
+            
+            streamline = [];
             
             % If panel matrices contain previous conditions, remove to retain
             % only current part characteristics
             [check,~] = size(Cp);
+            
             if check ~= row
+                
                 Cp(1,:) = [];
                 Mach(1,:) = [];
                 P(1,:) = [];
@@ -286,9 +353,7 @@ for i=1:runs
                 [displace, partProp, part] = structure3D(partProp, part, wingPressure{i}, Hmat, Lmat, Kmat);
                 
                 absDisplace = abs(displace);
-                rotPoints(j) = rotate(part,MAC,alpha);
                 
-%                 if all(absDisplace < 1e-5)
                 if all(absDisplace < 1e5)
                     
                     converged = true; 
@@ -306,7 +371,7 @@ for i=1:runs
         % to be first aerofoil in configuration)
         if any(partProp.Name == ["aerofoil","wing"]) && foilCount == 1
             
-            rootMoment(i) = wingbending(Cp,rotPoints(j),run);
+            rootMoment(i) = wingbending(Cp,points(j),run);
         end
         
         %% Shielding
@@ -325,25 +390,49 @@ for i=1:runs
             
             cellCp{count} = Cp;
             cellForce{count} = Cp.*area;
-            cellRadLoc{count} = radialLocation;
+            % cellRadLoc{count} = radialLocation;
+            
+            % Ensure bodyparts have same number of matrix elements to
+            % combine later
+            if count > 1 
+                
+                [r1,c1] = size(cellCp{count-1});
+                [r2,c2] = size(cellCp{count});
+                
+                dif = r2 - r1;
+                
+                if dif > 0 
+                    
+                    cellCp{count-1} = [cellCp{count-1}; nan(dif,c1)];
+                    cellForce{count-1} = [cellForce{count-1}; nan(dif,c1)];
+                    % cellRadLoc{count-1} = [cellRadLoc{count-1}; nan(dif,c1)];
+                    
+                elseif dif < 0 
+                
+                    cellCp{count} = [cellCp{count}; nan(-dif,c2)];
+                    cellForce{count} = [cellForce{count}; nan(-dif,c2)];
+                    % cellRadLoc{count} = [cellRadLoc{count}; nan(-dif,c2)];
+                    
+                end
+            end
             
             colCp = colCp + size(cellCp{count},2);
-            
             
             if colCp == size(bodyCp{i},2) || j == 1
                 
                 bodyCp{i} = [bodyCp{i}; cellCp{:}];
                 bodyForce{i} = [bodyForce{i}; cellForce{:}];
-                bodyRadLoc{i} = [bodyRadLoc{i}; cellRadLoc{:}];
+                % bodyRadLoc{i} = [bodyRadLoc{i}; cellRadLoc{:}];
                 
-                [cellCp,cellRadLoc] = deal(cell(1));
+                cellCp = cell(1);
+                % cellRadLoc = cell(1);
                 
                 prevBodyAngle = del(end,:);
                 prevBodyCp = Cp(end,:);
                 prevBodyP = P(end,:);
                 prevBodyMach = Mach(end,:);
                 
-                bodyOff = 0;
+                cols = 0;
                 count = 1;
                 colCp = 0;
                 
@@ -392,25 +481,6 @@ for i=1:runs
         deltaPrev = delta;
     end
     
-    %% Friction calculation
-    if viscous
-%         if partProp.Name == "nose"
-%             rot = (alpha*pi/180) + partProp.Rotation;
-%         else
-%             rot = 0;
-%         end
-
-%         fricData = cornervelocities(fricData, run);
-        
-%         intstreamline(fricData,run);
-        
-        % Independent of AoA
-        % Cdf = simplefriction(properties,partType,parameters,run);
-        Cdf = friction(points,bodyPart,Aref,run);
-    else
-        Cdf = 0;
-    end
-    
     %% Total configuration characteristics
     
     % Sum coefficients for flight state, distribute to respective variables
@@ -428,8 +498,8 @@ for i=1:runs
     
     L(i) = 0.5 * rho * (Uinf^2) * Cl(i) * Aref;
     D(i) = 0.5 * rho * (Uinf^2) * Cd(i) * Aref;
-    %     plotter(rotPoints)
     
+%     plotter(points,"impact")
 end
 
 %% Find averages and save all results
@@ -464,4 +534,20 @@ results.copBar = copBar;
 %% Translate aerodynamic characteristics to cost function values
 cost = cost_calculation(results,parameters,options);
 
-results.Cost = cost;
+inv = options.Inv;
+neg = options.Neg;
+
+trueCost = cost;
+trueCost(:,inv) = inv(:,inv)./cost(:,inv);
+trueCost(:,neg) = -cost(:,neg);
+
+results.Cost = trueCost;
+
+%% Save
+% addpath(genpath('Results'))
+% plotresults
+% load('BSX34')
+
+% save('validate','results','flow')
+
+end

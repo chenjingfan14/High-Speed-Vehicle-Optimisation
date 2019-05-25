@@ -51,16 +51,34 @@ end
 % format as optimisation values
 if isDirect
     
-    [~,col] = size(variCons);
+    [row,col] = size(variCons);
     
     % Grab titles
-    for i=col:-1:1
+    for i = col:-1:1
 
         Headers(i) = variCons{1,i};
     end
-
+    
+    [baseRow,~] = size(Definition);
+    
     transCol = Headers == "Transformations";
-    Definition = [Definition, variCons(:,transCol)];
+    
+    if any(transCol)
+        
+        Definition = [Definition repmat({"~"},baseRow,1)];
+        
+        for i = baseRow:-1:1
+            
+            for j = row:-1:1
+                
+                if Definition{i,1} == variCons{j,1}
+                    
+                    Definition(i,end) = variCons(j,transCol);
+                    break
+                end
+            end
+        end
+    end
 end
 
 [cond,varArray,baseVar] = translateOpt(Definition);
@@ -71,7 +89,8 @@ sections = foilData(sectionPos);
 baseVar = baseVar';
 
 [~,Base.Results,baseProperties,~,~,parameters] = particlecreator(baseVar,baseVar,varArray,sections,options);
-% parameters.Aref = 33.213;
+parameters.Aref = 33.213;
+parameters.MAC = 4.4323;
 
 % [~,Base.Results] = aeroprediction(baseProperties,fricPoints,parameters,options);
 
@@ -86,6 +105,7 @@ if isDirect
 end
 
 Base.Definition = cond;
+Base.Parameters = parameters;
 Base.VarArray = varArray;
 Base.Variables = baseVar;
 Base.nVar = length(baseVar);
@@ -104,7 +124,7 @@ end
 
 if display
     
-    points = flowfinder(baseProperties);
+    points = flowfinder(baseProperties,options);
     plotter(points,"title",'Baseline Configuration')
 else
     save(fullfile([pwd '\Results'], 'Baseline'))

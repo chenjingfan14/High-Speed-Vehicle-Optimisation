@@ -8,10 +8,31 @@ n = options.WingPartitions;
 % Define sections as Bezier curves
 switch aerofoilMethod
     
+    case {"Parsec","PARSEC"}
+        
+        foilTitles = {...
+            "Variables",    "VarMin",   "VarMax",   "Conditions",	"Transformations",	"Optimise/Hold"};
+        
+        foilDefs = {...
+            "rleu",         0.01,       0.1,        "~",            "~",                "Optimise";          
+            "rlel",        -0.1,       -0.01,       "~",            "~",                "Optimise";
+            "xup",          0.2,        0.8,        "~",            "~",                "Optimise";
+            "zup",          0.05,       0.15,       "~",            "~",                "Optimise";
+            "zxxup",       -0.6,       -0.4,        "~",            "~",                "Optimise";
+            "xlo",          0.2,        0.8,        "~",            "~",                "Optimise";
+            "zlo",         -0.15,      -0.05,       "~",            "~",                "Optimise";
+            "zxxlo",        0.4,        0.6,        "~",            "~",                "Optimise";
+            "zte",         -0.05,       0.05,       "~",            "~",                "Optimise";
+            "dzte",         0,          0.05,       "~",            "~",                "Optimise";
+            "ate",         -10,         10,         "~",            "~",                "Optimise";
+            "bte",          0,          20,         "~",            "~",                "Optimise"};
+            
+        foilDefs = [foilTitles; repmat(foilDefs, n + 1, 1)];
+        
     case "BP3434"
         
         foilDefs = {...
-            "Variables",    "VarMin",   "VarMax",   "Conditions",	"Transformations",	"Optimise/Hold"
+            "Variables",    "VarMin",   "VarMax",   "Conditions",	"Transformations",	"Optimise/Hold";
             "gle",          0.05,       0.1,        "~",            "~",                "Optimise";
             "b0",           0.01,       0.1,        "~",            "~",                "Optimise";
             "b2",           0.1,        0.3,        "~",            "~",                "Optimise";
@@ -91,25 +112,25 @@ switch aerofoilMethod
         BezierControlPoints = options.BezierControlPoints;
         
         % Control point min/max coordinates
-        %     minSec = [1, 0.1,   0.1,    0.1,    0.1,    0,      0;  % xc
-        %         1,      0.1,    0.1,    0.1,    0.1,    0,      0;  % xt
-        %        -0.03,  -0.1,   -0.1,   -0.05,  -0.05,   0,      0;  % zc
-        %         0,     -0.05,  -0.05,  -0.05,  -0.05,   0.05,   0]'; % zt
-        %
-        %     maxSec = [1, 0.9,   0.9,    0.9,    0.9,    0,      0;  % xc
-        %         1,      0.9,    0.9,    0.9,    0.9,    0,      0;  % xt
-        %         0.03,   0.1,    0.2,    0.2,    0.2,    0.05,   0;  % zc
-        %         0.03,   0.1,    0.2,    0.2,    0.2,    0.1,    0]'; % zt
+%         minSec = [1, 0.1,   0.1,    0.1,    0.1,    0,      0;  % xc
+%             1,      0.1,    0.1,    0.1,    0.1,    0,      0;  % xt
+%             -0.03,  -0.1,   -0.1,   -0.05,  -0.05,   0,      0;  % zc
+%             0,     -0.05,  -0.05,  -0.05,  -0.05,   0.05,   0]'; % zt
+%         
+%         maxSec = [1, 0.9,   0.9,    0.9,    0.9,    0,      0;  % xc
+%             1,      0.9,    0.9,    0.9,    0.9,    0,      0;  % xt
+%             0.03,   0.1,    0.2,    0.2,    0.2,    0.05,   0;  % zc
+%             0.03,   0.1,    0.2,    0.2,    0.2,    0.1,    0]'; % zt
         
-        minSec = [1, 0.7,   0.5,    0.3,    0.1,    0,      0;  % xc
-            1,      0.7,    0.5,    0.3,    0.1,    0,      0;  % xt
-            -0.03,  -0.1,   -0.1,   -0.05,  -0.05,   0,      0;  % zc
-            0,     -0.05,  -0.05,  -0.05,  -0.05,   0.05,   0]'; % zt
-        
-        maxSec = [1, 0.9,   0.7,    0.5,    0.3,    0,      0;  % xc
-            1,      0.9,    0.7,    0.5,    0.3,    0,      0;  % xt
-            0.03,   0.1,    0.2,    0.2,    0.2,    0.05,   0;  % zc
-            0.03,   0.1,    0.2,    0.2,    0.2,    0.1,    0]'; % zt
+%         minSec = [1, 0.7,   0.5,    0.3,    0.1,    0,      0;  % xc
+%             1,      0.7,    0.5,    0.3,    0.1,    0,      0;  % xt
+%             -0.03,  -0.1,   -0.1,   -0.05,  -0.05,   0,      0;  % zc
+%             0,     -0.05,  -0.05,  -0.05,  -0.05,   0.05,   0]'; % zt
+%         
+%         maxSec = [1, 0.9,   0.7,    0.5,    0.3,    0,      0;  % xc
+%             1,      0.9,    0.7,    0.5,    0.3,    0,      0;  % xt
+%             0.03,   0.1,    0.2,    0.2,    0.2,    0.05,   0;  % zc
+%             0.03,   0.1,    0.2,    0.2,    0.2,    0.1,    0]'; % zt
         
         %% NEW TEST
         minSec = [1, 0.7,   0.5,    0.3,    0.1,    0,      0;  % xc

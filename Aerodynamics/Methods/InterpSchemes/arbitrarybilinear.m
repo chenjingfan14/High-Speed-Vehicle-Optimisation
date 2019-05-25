@@ -15,34 +15,30 @@ x = ones(4); % x,y points (x-1,y-1 panels)
 dim3 = dim1-1;
 dim4 = dim2-1;
 
-x = repmat((0:dim1-1)',1,dim2);
-y = repmat((0:dim2-1),dim1,1);
-z = zeros(dim1,dim2);
+points(:,:,1) = repmat((0:dim1-1)',1,dim2);
+points(:,:,2) = repmat((0:dim2-1),dim1,1);
+points(:,:,3) = zeros(dim1,dim2);
 
 %% Random perturbation to make uniform grid chaotic, only inner points
 randx = rand(dim3-1,dim4-1)*0.5 - 0.25;
 randy = rand(dim3-1,dim4-1)*0.5 - 0.25;
 
-x(2:end-1,2:end-1) = x(2:end-1,2:end-1) + randx;
-y(2:end-1,2:end-1) = y(2:end-1,2:end-1) + randy;
+points(2:end-1,2:end-1,1) = points(2:end-1,2:end-1,1) + randx;
+points(2:end-1,2:end-1,2) = points(2:end-1,2:end-1,2) + randy;
 
-points.x = x;
-points.y = y;
-points.z = z;
-points = xyztopoints(points);
 plotter(points)
 
 %% Start of interp
 
-x1 = x(1:end-1,2:end);
-x2 = x(2:end,2:end);
-x3 = x(1:end-1,1:end-1);
-x4 = x(2:end,1:end-1);
+x1 = points(1:end-1,2:end,1);
+x2 = points(2:end,2:end,1);
+x3 = points(1:end-1,1:end-1,1);
+x4 = points(2:end,1:end-1,1);
 
-y1 = y(1:end-1,2:end);
-y2 = y(2:end,2:end);
-y3 = y(1:end-1,1:end-1);
-y4 = y(2:end,1:end-1);
+y1 = points(1:end-1,2:end,2);
+y2 = points(2:end,2:end,2);
+y3 = points(1:end-1,1:end-1,2);
+y4 = points(2:end,1:end-1,2);
 
 Px = (x1+x2+x3+x4)/4;
 Py = (y1+y2+y3+y4)/4;

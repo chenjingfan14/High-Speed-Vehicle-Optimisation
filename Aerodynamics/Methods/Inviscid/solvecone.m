@@ -12,7 +12,7 @@ function [thetac,Mc,sol]=solvecone(thetas,Minf,gamma)
 thetasr=thetas;
 
 if (thetasr<=asin(1/Minf))
-    thetac=0.0; Mc=Minf;
+    thetac=0.0; Mc=Minf; sol =[];
     return;
 end
 

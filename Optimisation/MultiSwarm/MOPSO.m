@@ -1,4 +1,4 @@
-function [nonDomFit,nonDomPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,inv,fi,options)
+function [nonDomFit,nonDomPos,history] = MOPSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxPF,mutProb,w,c1,c2,nFun,fi,options)
 %% Multi Objective Particle Swarm Optimiser
 % Main program, initialises swarm based on minimum/maximum design variables
 % Uses cost function values to update swarm positions throughout process
@@ -100,7 +100,12 @@ end
 % Initial Pareto Front = initial non-dominated particles
 initPF = nonDomFit;
 initPFDisp = initPF;
+
+inv = options.Inv;
+neg = options.Neg;
+
 initPFDisp(:,inv) = inv(:,inv)./initPFDisp(:,inv);
+initPFDisp(:,neg) = -initPFDisp(:,neg);
 
 % Initial particle best position = current position
 parBestPos = parPos;
@@ -254,9 +259,11 @@ for it = 2:maxIt+1
     %% Display
     parFitDisp = parFit;
     parFitDisp(:,inv) = inv(:,inv)./parFitDisp(:,inv);
+    parFitDisp(:,neg) = -parFitDisp(:,neg);
     
     nonDomFitDisp = nonDomFit;
     nonDomFitDisp(:,inv) = inv(:,inv)./nonDomFitDisp(:,inv);
+    nonDomFitDisp(:,neg) = -nonDomFitDisp(:,neg);
     
     nonDomFitBar = mean(nonDomFitDisp,1);
     fprintf(['Iteration %i: Mean PF f(x): ' str ' nPF: %i \n'], it-1, nonDomFitBar, nNonDomParticles);
@@ -265,58 +272,8 @@ for it = 2:maxIt+1
     
     if mod(it-1,fi) == 0
         
-        if options.Baseline
-            
-            baselineCost = options.Base.Results.Cost;
-        else
-            baselineCost = zeros(1,nFun);
-        end
-            
-        % Have max limits slightly above that of PF so that points are not
-        % lying on the edges
-        maxf = max([nonDomFitDisp; baselineCost] ,[],1)*1.2;
-        minf = min([nonDomFitDisp; baselineCost] ,[],1);
-        figure(fcount)
-        clf
-        title(['Pareto Front (Iteration: ' num2str(it-1) ')'])
-        set(gcf, 'Position', [0, 0, 1920, 1200])
-        hold on
-        xlabel('1/L')
-        ylabel('Cd')
+        multifunplot(it-1,nonDomFitDisp,options,plotFun,limits,fcount);
         
-        % Max amount of cost functions that can be plotted is 3, so if
-        % there are > 3, only plot first 3
-        if nFun > 3
-            maxf = maxf(1:3);
-            minf = minf(1:3);
-        end
-            
-        for i = 1:plotFun
-            if inv(i) == 0
-                limits(i,:) = [min(0,minf(i)), maxf(i)];
-            else
-                limits(i,:) = [minf(i), maxf(i)];
-            end
-        end
-        
-        xlim(limits(1,:))
-        ylim(limits(2,:))
-        
-        if nFun == 2
-
-            plot(baselineCost(:,1), baselineCost(:,2),'ko');
-            % plot(parFitDisp(:,1), parFitDisp(:,2),'k*');
-            plot(nonDomFitDisp(:,1), nonDomFitDisp(:,2),'kx');
-        else
-            plot3(baselineCost(:,1), baselineCost(:,2), baselineCost(:,3),'ko');
-            % plot3(parFitDisp(:,1), parFitDisp(:,2), parFitDisp(:,3),'k*');
-            plot3(nonDomFitDisp(:,1), nonDomFitDisp(:,2), nonDomFitDisp(:,3),'kx');
-            zlim(limits(3,:))
-            zlabel('M')
-        end
-        
-        legend('Baseline', 'Optimal Design')
-        hold off
         % Pause to display graph while simulation is running
         pause(0.00001)
         fcount = fcount + 1;

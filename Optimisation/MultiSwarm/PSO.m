@@ -1,4 +1,4 @@
-function [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
+function [GlobalBestFit,GlobalBestPos,history] = PSO(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,neg,fi,foilData,n,flow,thetaBetaM,maxThetaBetaM,PrandtlMeyer,options)
 %% Swarm
 
 % Creating 3 sets within population, defines mutation method on set

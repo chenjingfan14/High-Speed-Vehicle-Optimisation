@@ -15,11 +15,15 @@ classdef wingtail
         Span
         Dihedral
         LESweep
+        Cbar
         MAC
+        ThicknessND
+        Thickness
         WetChord
         WetArea
         WetSpan
         WetMAC
+        WetCbar
         Partitions
         Box
         Skin
@@ -97,6 +101,8 @@ classdef wingtail
                 
             end
             
+            MAC = sum(Area.*cbar)/sum(Area);
+            
             %% Wing x-distribution
               
             for i=nSecs:-1:1
@@ -111,8 +117,7 @@ classdef wingtail
                     foilUp(:,i) = flip(Sec(1:half,2));
                     foilLo(:,i) = Sec(half:dim,2);
                 else
-                    xPanels = 50;
-                    X = (0:xPanels)';
+                    X = (0:obj.xPanels)';
                     
                     switch obj.Distribution
                         
@@ -138,6 +143,9 @@ classdef wingtail
                     foilLo(:,i) = interp1(lower(:,1),lower(:,2),xNorm,'pchip');
                 end
             end
+            
+            thicknessND = max(abs(foilUp - foilLo));
+            thickness = chord.*thicknessND;
             
             %% Control surfaces
             if exist('control','var')
@@ -242,11 +250,15 @@ classdef wingtail
             obj.WetSpan = semispan;
             obj.Area = Area;
             obj.WetArea = Area;
-            obj.MAC = cbar;
-            obj.WetMAC = cbar;
+            obj.Cbar = cbar;
+            obj.WetCbar = cbar;
+            obj.MAC = MAC;
+            obj.WetMAC = MAC;
             obj.Dihedral = di;
             obj.LESweep = LEsweep * 180/pi;
             obj.xNorm = xNorm;
+            obj.ThicknessND = thicknessND;
+            obj.Thickness = thickness;
             obj.Points = points;
             obj.Partitions = nParts;
             obj.Boolean = boolean;

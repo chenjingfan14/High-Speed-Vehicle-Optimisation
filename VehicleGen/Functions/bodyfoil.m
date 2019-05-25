@@ -9,6 +9,8 @@ xBody = bodyPoints(:,1,1);
 % Radial y,z body coords
 yzBody = squeeze(bodyPoints(1,:,[2 3]));
 
+meanRad = (aftBody.Height + aftBody.Width)/2;
+
 % Creating vectors for cross product to get body normals
 [row,col,~] = size(bodyPoints);
 rows = 1:row - 1;
@@ -114,7 +116,41 @@ for i=1:numAerofoils
             return
         end
         
-        bridge(ii,:) = inter;
+        % yz distance between bridge point and previous bridge point
+        if ii == 1
+            
+            yzDist = 0;
+        else
+            yzDist = ((prevInter(2) - inter(2))^2 + (prevInter(2) - inter(2))^2)^0.5;
+        end
+        
+        % If radical change between bridge points, may be an error in
+        % discretisation
+        % Value will need to be changed depending on fuselage shape
+        if yzDist < meanRad/4
+            
+            bridge(ii,:) = inter;
+        else
+            % Failed to merge wing-body
+            
+            % Check what failed config looks like
+%             aerofoil.Points = foil;
+%             plotter({aftBody.Points,aerofoil.Points});
+            
+            % Increase or descrease wing z offset
+            if inter(3) < prevInter(3)
+                
+                reason = 3;
+            else
+                reason = 4;
+            end
+            
+            success = false;
+            return
+        end
+        
+        prevInter = inter;
+        
     end
     
     if bool
@@ -202,23 +238,37 @@ for i=1:numAerofoils
     wetChord1 = diff(bridgeUpper([1 end],:,1));
     wetChord2 = wingtail.Chord(2);
     
+    % For rectangular projection into fuselage, cr = first wet chord
+    dryChord = wetChord1;
+    
     y1 = reshape(wingtail.Points(:,[1 end],2),[],1);
     y2 = reshape(wingtail.Points(:,[2 end-1],2),[],1);
     wetSpan = diff(mean([y1 y2],1));
+    drySpan = wingtail.Span(1) - wetSpan(1);
     
+    dryArea = drySpan * wetChord1;
     wetArea = ((wetChord2 + wetChord1)/2)*wetSpan;
+    
+    Area1 = wetArea + dryArea;
+    
     Taper = wetChord2/wetChord1;
     
     if Taper == inf
         Taper = 0;
     end
     
-    wetMAC = (2/3)*wetChord1*((1+Taper+(Taper^2))/(1+Taper));
+    wetCbar = (2/3)*wetChord1*((1+Taper+(Taper^2))/(1+Taper));
+    
+    wingtail.Cbar(1) = sum([dryArea, wetArea] .* [dryChord, wetCbar])/Area1;
     
     wingtail.WetChord = [wetChord1, wingtail.Chord(2:end)];
     wingtail.WetArea = [wetArea, wingtail.Area(2:end)];
     wingtail.WetSpan = [wetSpan, wingtail.Span(2:end)];
-    wingtail.WetMAC = [wetMAC, wingtail.MAC(2:end)];
+    wingtail.WetCbar = [wetCbar, wingtail.WetCbar(2:end)];
+    
+    wingtail.Area = [Area1, wingtail.Area(2:end)];
+%     wingtail.MAC = sum(wingtail.Area .* wingtail.Cbar)/sum(wingtail.Area);
+    wingtail.MAC = sum(wingtail.Area .* wingtail.WetCbar)/sum(wingtail.Area);
     
     aerofoil(i) = wingtail;
 end

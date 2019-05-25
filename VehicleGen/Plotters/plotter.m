@@ -22,15 +22,10 @@ figure
 currentFig = gcf;
 
 hold on
+box on
 set(currentFig, 'Position', pos)
-axis equal
-xlabel('x (m)')
-ylabel('y (m)')
-zlabel('z (m)')
 
-% r=[1,0,0];
-% g=[0,1,0];
-% b=[0,0,1];
+[xlim, ylim, zlim] = deal([inf -inf]);
 
 colour=[0.6 0.6 0.6];
 
@@ -43,7 +38,12 @@ end
 
 for ii=1:nPoints
     
-    part = struct(ii);
+    if any(plotDefs == "triangle") && isfield(struct(ii),'Triangle')
+            
+        part = struct(ii).Triangle;
+    else
+        part = struct(ii);
+    end
     
     if iscell(part)
         
@@ -66,40 +66,101 @@ for ii=1:nPoints
         z = points(:,:,3);
     end
     
+    xlim = [min(xlim(1),min(x(:))) max(xlim(2),max(x(:)))];
+    ylim = [min(ylim(1),min(y(:))) max(ylim(2),max(y(:)))];
+    zlim = [min(zlim(1),min(z(:))) max(zlim(2),max(z(:)))];
+    
     %%
     if any(plotDefs == "impact")
         
-        centre = part.centre;
-        xyz = part.xyz;
-        [x,y] = size(centre);
+        x = part.Points(:,:,1);
+        y = part.Points(:,:,2);
+        z = part.Points(:,:,3);
         
-        for i = 1:x
-            for j = 1:3:y
+        if isfield(part,'TriID')
+            
+            ID = part.TriID;
+            
+            x = x(ID);
+            y = y(ID);
+            z = z(ID);
+            
+        elseif isfield(part,'QuadID')
+            
+            ID = part.Quad;
+            
+            x = x(ID);
+            y = y(ID);
+            z = z(ID);
+        end
+        
+        [row,~] = size(x);
+        
+        for i = 1:row
+            
+            if part.flow(i)
                 
-                p = [xyz(i:i+1,j:j+2); xyz(i+1:-1:i,j+3:j+5)];
-                
-                if points.flow(i,(j+2)/3) == 1
-                    colour = [1 0 0];
-                else
-                    colour = [0.5 0.5 0.5];
-                end
-                fill3(p(:,1),p(:,2),p(:,3),colour);%,'EdgeColor','none');
+                colour = [1 0 0];
+            else
+                colour = [0.5 0.5 0.5];
             end
+            fill3(x(i,:),y(i,:),z(i,:),colour);%,'EdgeColor','none')
         end
     elseif any(plotDefs == "wire")
         
-        mesh(x,y,z,'edgecolor','k');
+        h = mesh(x,y,z,'edgecolor','k');
+        
+        % Removing legend entry for panels
+        set(get(get(h,'Annotation'),'LegendInformation'),'IconDisplayStyle','off');    
         
     else
         
-        h = surf(x,y,z,'LineWidth',0.05);
-        
+        if any(plotDefs == "triangle")
+            
+            [n,m] = size(x);
+            
+            if n > 1 && m == 3
+                
+                tri = zeros(n,m);
+                dim = 1:numel(tri);
+                
+                tri(:) = dim;
+                
+            else
+            
+                mn = n * m;
+
+                a = (1:mn - n)';
+
+                t1 = [a, a+1, n+a];
+                t2 = [a+1, n+a, n+a+1];
+
+                delete = n:n:mn - n;
+
+                t1(delete,:) = [];
+                t2(delete,:) = [];
+
+                tri = zeros(size(t1,1)*2,3);
+
+                tri(1:2:end,:) = t1;
+                tri(2:2:end,:) = t2;
+            end
+            
+            tr = triangulation(tri,x(:),y(:),z(:));
+            h = trisurf(tr,'LineWidth',0.05);
+        else
+            h = surf(x,y,z,'LineWidth',0.05);
+        end
         if any(plotDefs == "nolines")
+            
             set(h,'FaceColor',colour,'FaceLighting','flat','EdgeColor','none');
         else
             set(h,'FaceColor',colour,'FaceLighting','flat');
         end
-    end
+        
+        % Removing legend entry for panels
+        set(get(get(h,'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
+    end        
     
     %%
     if any(plotDefs == "centre")
@@ -107,12 +168,12 @@ for ii=1:nPoints
         cx = part.centre(:,:,1);
         cy = part.centre(:,:,2);
         cz = part.centre(:,:,3);
-        plot3(cx,cy,cz,'k*')
+        plot3(cx,cy,cz,'k.')
         
     end
     
     %%
-    if any(plotDefs == "normals")
+    if any(plotDefs == "normal")
         
         cx = part.centre(:,:,1);
         cy = part.centre(:,:,2);
@@ -121,11 +182,11 @@ for ii=1:nPoints
         nx = part.norm(:,:,1);
         ny = part.norm(:,:,2);
         nz = part.norm(:,:,3);
-        plot3(nx + cx, ny + cy, nz + cz,'r*')
+        plot3(nx + cx, ny + cy, nz + cz,'r.')
         
     end
     
-    if any(plotDefs == "unit normals")
+    if any(plotDefs == "unit normal")
         
         cx = part.centre(:,:,1);
         cy = part.centre(:,:,2);
@@ -135,7 +196,7 @@ for ii=1:nPoints
         nx = part.unitNorm(:,:,1)/10;
         ny = part.unitNorm(:,:,2)/10;
         nz = part.unitNorm(:,:,3)/10;
-        plot3(nx + cx, ny + cy, nz + cz,'r*')
+        plot3(nx + cx, ny + cy, nz + cz,'r.')
         
     end
     
@@ -201,6 +262,8 @@ for ii=1:nPoints
                 set(h,'FaceColor',colour,'FaceLighting','flat');
             end
         end
+        
+        ylim = [min(ylim(1),min(-y(:))) max(ylim(2),max(y(:)))];
     end
     
     if any(plotDefs == "title")
@@ -212,6 +275,27 @@ for ii=1:nPoints
     end
     
 end
+
+if xlim(1) == xlim(2)
+    
+    xlim(2) = xlim(2) + 1;
+end
+
+if ylim(1) == ylim(2)
+    
+    ylim(2) = ylim(2) + 1;
+end
+
+if zlim(1) == zlim(2)
+    
+    zlim(2) = zlim(2) + 1;
+end
+
+axis('equal',[xlim ylim zlim])
+xlabel('x, m','Interpreter','latex','FontSize',14);
+ylabel('y, m','Interpreter','latex','FontSize',14);
+zlabel('z, m','Interpreter','latex','FontSize',14);
+set(gca,'TickLabelInterpreter','latex','FontSize', 14);
 hold off
 
 if any(plotDefs == "pause")

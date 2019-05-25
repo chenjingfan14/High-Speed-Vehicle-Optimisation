@@ -8,58 +8,83 @@ fore = options.Fore;
 nose = options.Nose;
 control = options.Control;
 baseline = options.Baseline;
+n = options.WingPartitions;
 
 %% 2D Aerofoil Section Defintion
 
-if aerofoilMethod == "BP3434"
+switch aerofoilMethod
     
-elseif aerofoilMethod == "Bezier"
-    
-    % Define sections as Bezier curves
-    BezierControlPoints = options.BezierControlPoints;
-    
-    % Control point min/max coordinates
-    standSec = [1,  0.9,    0.7,    0.5,    0.3,    0,      0;
-        1,  0.9,    0.7,    0.5,    0.3,    0,      0;
-        0,  0.035,  0.04,   0.07,   0.04,   0.05,   0;
-        0, -0.015, -0.02,  -0.05,  -0.02,  -0.05,   0]';
-    
-    [standControlPoints,~] = size(standSec(2:end,:));
-    
-    if standControlPoints ~=  BezierControlPoints
+    case {"PARSEC","Parsec"}
         
-        error("Number of Bezier control points not consistent with options definition")
-    end
-    
-    sectionStr = "Bezier";
-    
-elseif aerofoilMethod == "BezierTC"
-    
-    BezierControlPoints = options.BezierControlPoints;
-    
-    % Control point min/max coordinates
-    standSec = [1, 0.7,   0.5,    0.3,    0.1,    0,      0;  % xc
-        1,      0.7,    0.5,    0.3,    0.1,    0,      0;  % xt
-       -0.03,  -0.1,   -0.1,   -0.05,  -0.05,   0,      0;  % zc
-        0,     -0.05,  -0.05,  -0.05,  -0.05,   0.05,   0]'; % zt
-    
-    [standSecPoints,~] = size(standSec(2:end,:));
-    
-    if standSecPoints ~=  BezierControlPoints
+        warning('No standard variable set up for aerofoil creation method %s, ensure all minimum and maximum values are defined', aerofoilMethod)
         
-        error("Number of Bezier control points not consistent with options definition")
-    end
-    
-    sectionStr = "Bezier";
-    
-elseif aerofoilMethod == "Preloaded"
-    
-    % Define sections be pre-loaded data files
-    standSec = 1;
-    sectionStr = "Section";
-    
-else
-    error('No standard variables set for aerofoil creation method %s', aerofoilMethod);
+        sectionStr = {...
+            "rleu"        
+            "rlel"
+            "xup"
+            "zup"
+            "zxxup"
+            "xlo"
+            "zlo"
+            "zxxlo"
+            "zte"
+            "dzte"
+            "ate"
+            "bte"};
+        
+        standSec = repmat({NaN},length(sectionStr),1);
+        
+    case "BP3434"
+        
+        error('No standard variable set up for aerofoil creation method %s, ensure all minimum and maximum values are defined', aerofoilMethod)
+        
+    case "Bezier"
+        
+        % Define sections as Bezier curves
+        BezierControlPoints = options.BezierControlPoints;
+        
+        % Control point min/max coordinates
+        standSec = [1,  0.9,    0.7,    0.5,    0.3,    0,      0;
+            1,  0.9,    0.7,    0.5,    0.3,    0,      0;
+            0,  0.035,  0.04,   0.07,   0.04,   0.05,   0;
+            0, -0.015, -0.02,  -0.05,  -0.02,  -0.05,   0]';
+        
+        [standControlPoints,~] = size(standSec(2:end,:));
+        
+        if standControlPoints ~=  BezierControlPoints
+            
+            error("Number of Bezier control points not consistent with options definition")
+        end
+        
+        sectionStr = "Bezier";
+        
+    case "BezierTC"
+        
+        BezierControlPoints = options.BezierControlPoints;
+        
+        % Control point min/max coordinates
+        standSec = [1, 0.7,   0.5,    0.3,    0.1,    0,      0;  % xc
+            1,      0.7,    0.5,    0.3,    0.1,    0,      0;  % xt
+            -0.03,  -0.1,   -0.1,   -0.05,  -0.05,   0,      0;  % zc
+            0,     -0.05,  -0.05,  -0.05,  -0.05,   0.05,   0]'; % zt
+        
+        [standSecPoints,~] = size(standSec(2:end,:));
+        
+        if standSecPoints ~=  BezierControlPoints
+            
+            error("Number of Bezier control points not consistent with options definition")
+        end
+        
+        sectionStr = "Bezier";
+        
+    case "Preloaded"
+        
+        % Define sections be pre-loaded data files
+        standSec = 1;
+        sectionStr = "Section";
+        
+    otherwise
+        error('No standard variables set for aerofoil creation method %s', aerofoilMethod);
 end
 
 Definition = {...
@@ -70,9 +95,15 @@ wingDefs = {...
     "Chord",            0.8;
     "TESweep",          0;
     "Semispan",         2;
-    sectionStr,         standSec;
     "xOffset",          0;
     "zOffset",          0};
+
+if size(sectionStr,1) > 1
+
+    foilDefs = repmat([sectionStr, standSec], n + 1, 1);
+else
+    foilDefs = {sectionStr, repmat(standSec, 1, 1, n + 1)};
+end
 
 aftDefs = {...
     "UpperLength",      0;
@@ -108,7 +139,7 @@ controlDefs = {...
 [rows,~] = size(variCons);
 
 if wing
-    Definition = [Definition; wingDefs];
+    Definition = [Definition; wingDefs; foilDefs];
 end
 
 if aft

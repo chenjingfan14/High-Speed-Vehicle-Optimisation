@@ -2,7 +2,7 @@ function penalty = violation(constrain,minVal,maxVal)
 
 penalty = zeros(size(constrain));
 
-eta = 10;
+eta = 100;
 
 tooLow = constrain < minVal;
 tooBig = constrain > maxVal;

@@ -16,7 +16,7 @@ idCol = colArray(idCol);
 
 % All panel inclinations to flow for attached shock must be less than
 % maximum allowable otherwise switch infringing panels to newtonian flow
-con = theta <= maxiThetaBetaM(2,idCol);
+con = theta <= maxiThetaBetaM(idCol,2);
 
 thetaO = theta(con);
 thetaN = theta(~con);
@@ -56,7 +56,7 @@ else
     iThetaBetaMvec = iThetaBetaM(2:end,[1 idCol]);
 
     % Only keep values greater than 0 and below max theta (ie. 
-    TBMcon = iThetaBetaMvec(:,2) > 0 & iThetaBetaMvec(:,1) <= maxiThetaBetaM(3,idCol);
+    TBMcon = iThetaBetaMvec(:,2) > 0 & iThetaBetaMvec(:,1) <= maxiThetaBetaM(idCol,3);
 
     iThetaBetaMvec = iThetaBetaMvec(TBMcon,:);
 
@@ -81,5 +81,5 @@ end
 P(con) = Pratio*Pinf;
 
 if ~isempty(thetaN)
-    [Cp(~con),Mach(~con),P(~con)] = newtonian([],thetaN,0,flow);
+    [Cp(~con),Mach(~con),P(~con)] = newtonian(thetaN,flow);
 end

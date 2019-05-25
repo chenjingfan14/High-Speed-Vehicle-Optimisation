@@ -1,4 +1,4 @@
-function [GlobalBestFit,GlobalBestPos,history] = GeneticAlgorithm(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,Pc,Pm,Er,nFun,inv,fi,options)
+function [GlobalBestFit,GlobalBestPos,history] = GeneticAlgorithm(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,Pc,Pm,Er,nFun,fi,options)
 
 %%  Initialization
 
@@ -25,8 +25,12 @@ popGene = unifrnd(varMinMat,varMaxMat,varSize);
 [GlobalBestFit(1),bestID] = min(popFitness);
 GlobalBestPos(1,:) = popGene(bestID,:);
 
+inv = options.Inv;
+neg = options.Neg;
+
 GlobalBestFitDisp = GlobalBestFit;
 GlobalBestFitDisp(:,inv) = inv(:,inv)./GlobalBestFitDisp(:,inv);
+GlobalBestFitDisp(:,neg) = -GlobalBestFitDisp(:,neg);
 
 history(1,:) = [1, GlobalBestFitDisp(1,:), 0];
 
@@ -69,6 +73,7 @@ for it = 2 : maxIt + 1
     %% Display
     GlobalBestFitDisp = GlobalBestFit;
     GlobalBestFitDisp(:,inv) = inv(:,inv)./GlobalBestFitDisp(:,inv);
+    GlobalBestFitDisp(:,neg) = -GlobalBestFitDisp(:,neg);
     
     if GlobalBestFit(it) < GlobalBestFit(it-1)
 

@@ -1,4 +1,4 @@
-function [points,newProperties,bodyPart,partType,impactMethod,shadowMethod] = flowfinder(properties)
+function [points,newProperties,bodyPart,partType,impactMethod,shadowMethod] = flowfinder(properties,options)
 %% Aerodynamic prediction method mixer
 % Defines which prediction method to be used for each part and
 % impact/shadow flow
@@ -9,6 +9,9 @@ properties = properties(~cellfun('isempty',properties));
 dim = numel(properties);
 
 numParts = ones(dim,1);
+
+viscous = options.Viscous;
+quad = options.Quad;
 
 for i=1:dim
     
@@ -27,6 +30,7 @@ id = sumParts;
 
 for i = dim:-1:1
     
+    name = properties{i}.Name;
     propPoints = properties{i}.Points;
     dim2 = numParts(i);
     
@@ -35,9 +39,15 @@ for i = dim:-1:1
         % points structure outwith properties cell
         if iscell(propPoints)
             
-            points(id) = normals(propPoints{j});
+            points(id) = normals(propPoints{j},viscous,quad);
         else
-            points(id) = normals(propPoints);
+            points(id) = normals(propPoints,viscous,quad);
+        end
+        
+        if name == "aerofoil l"
+            
+            points(id).norm = -points(id).norm;
+            points(id).unitNorm = -points(id).unitNorm;
         end
         
         %% DELETE? Need same amount of properties as point structures?
@@ -57,6 +67,7 @@ partType = string(partType);
 
 %% Prediction method matrices
 % Numbers correspond to switch case in parent function (aeroprediction)
+
 for i=1:sumParts
     
     partType(i) = newProperties{i}.Name;
@@ -69,32 +80,44 @@ for i=1:sumParts
     % Shadow:   1 - Newtonian/Base Pressure
     %           2 - Prandtl-Meyer
     switch partType(i)
-        case {"aerofoil","wing","tail"}
+        case {"aerofoil","wing","tail","aerofoil l","aerofoil u"}
             
             bodyPart(i) = false;
-            impactMethod(i) = 1;
-            shadowMethod(i) = 1;
+            impactMethod(i) = 3;
+            shadowMethod(i) = 2;
             
         case "aftbody"
             
-            impactMethod(i) = 1;
-            shadowMethod(i) = 1;
+            impactMethod(i) = 3;
+            shadowMethod(i) = 2;
             
         case "forebody"
             
-            impactMethod(i) = 1;
-            shadowMethod(i) = 1;
+            impactMethod(i) = 3;
+            shadowMethod(i) = 2;
             
         case "nose"
            
-            impactMethod(i) = 1;
-            shadowMethod(i) = 1;
+            impactMethod(i) = 3;
+            shadowMethod(i) = 2;
             
         case "test"
             
-            impactMethod(i) = 1;
-            shadowMethod(i) = 1;         
+            impactMethod(i) = 3;
+            shadowMethod(i) = 2;     
+            
+        otherwise
+            
+            bodyPart(i) = false;
+            impactMethod(i) = 3;
+            shadowMethod(i) = 2;    
     end 
+end
+
+if isfield(options,'ImpactMethod')
+    
+    impactMethod = options.ImpactMethod;
+    shadowMethod = options.ShadowMethod;
 end
 
 end

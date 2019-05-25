@@ -1,4 +1,4 @@
-function [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,inv,fi,options)
+function [GlobalBestFit,GlobalBestPos,history] = PSONeighbourhood(cond,costFun,varArray,varMin,varMax,nVar,nPop,maxIt,maxStall,mutProb,w,wmax,wmin,c1,c2,nFun,fi,options)
 
 Ni = floor(0.25*nPop);
 N = Ni;
@@ -42,14 +42,18 @@ parBestFit = parFit;
 [GlobalBestFit(1),bestID] = min(parBestFit);
 GlobalBestPos(1,:) = parBestPos(bestID,:);
 
-
 fcount = 1; % Figure counter
+
+inv = options.Inv;
+neg = options.Neg;
 
 parFitDisp = parFit;
 parFitDisp(:,inv) = inv(:,inv)./parFitDisp(:,inv);
+parFitDisp(:,neg) = -parFitDisp(:,neg);
 
 GlobalBestFitDisp = GlobalBestFit;
 GlobalBestFitDisp(:,inv) = inv(:,inv)./GlobalBestFitDisp(:,inv);
+GlobalBestFitDisp(:,neg) = -GlobalBestFitDisp(:,neg);
 
 % Print iteration, mean for every fitness function, success rate
 parFitBar = mean(parFitDisp(parFitDisp < inf),1);
@@ -151,9 +155,11 @@ for it = 2:maxIt+1
     %% Display
     parFitDisp = parFit;
     parFitDisp(:,inv) = inv(:,inv)./parFitDisp(:,inv);
+    parFitDisp(:,neg) = -parFitDisp(:,neg);
     
     GlobalBestFitDisp = GlobalBestFit;
     GlobalBestFitDisp(:,inv) = inv(:,inv)./GlobalBestFitDisp(:,inv);
+    GlobalBestFitDisp(:,neg) = -GlobalBestFitDisp(:,neg);
     
     parFitBar = mean(parFitDisp(parFitDisp < inf),1);
     fprintf('Iteration %i: Global Best: %3.4f Mean: %3.4f Stall: %i \n', it-1, GlobalBestFitDisp(it), parFitBar, stall);
@@ -164,24 +170,8 @@ for it = 2:maxIt+1
     
     if mod(it-1,fi) == 0 || convergence
         
-        if options.Baseline
-            
-            baselineCost = options.Base.Results.Cost;
-        else
-            baselineCost = zeros(1,nFun);
-        end
+        singlefunplot(it-1,GlobalBestFitDisp,options,fcount)
         
-        figure(fcount)
-        clf
-        title(['Cost Function Time History (Iteration: ' num2str(it-1) ')'])
-        set(gcf, 'Position', [0, 0, 1920, 1200])
-        hold on
-        xlabel('Iterations')
-        ylabel('f(x)')
-        plot(it-1, baselineCost,'kx');
-        plot(0:it-1, GlobalBestFitDisp(1:it),'k');
-        legend('Baseline', 'Optimal Design')
-        hold off
         % Pause to display graph while simulation is running
         pause(0.00001)
         fcount = fcount+1;

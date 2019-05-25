@@ -2,4 +2,11 @@
 # are ignored
 
 # Things appearing in TestCases/ repo to ignore:
-**/
+*.mat
+*.asv
+*.fig
+*.dat
+*.png
+*.jpeg
+*.emp
+**/Results/

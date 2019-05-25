@@ -20,6 +20,7 @@ end
 
 % If running on cluster, close down parallel loop
 if cluster
+    
     delete(gcp('nocreate'));
 end
 
@@ -31,12 +32,15 @@ configInputs = GlobalBestPos;
 % Save global best history/pareto front figure and workspace in current directory
 if nFun == 1
     
-    saveas(gcf,[resultPath '\GlobalBestHistory'])
+    saveas(gcf,'GlobalBestHistory')
+%     saveas(gcf,[resultPath '\GlobalBestHistory'])
 else
-    saveas(gcf,[resultPath '\ParetoFront'])
+    saveas(gcf,'ParetoFront')     
+%     saveas(gcf,[resultPath '\ParetoFront'])
 end
 
-save(fullfile(resultPath, 'OptimisationResults'))
+save('OptimisationResults')
+% save(fullfile(resultPath, 'OptimisationResults'))
 
 % Use this function to create output plots/results for arbitrary configs, 
 % will not work for cluster simulations
