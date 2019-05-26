@@ -69,7 +69,7 @@ else
     
     ID = reshape(1:m*n*2,n*2,m);
 end
-% 
+
 radialLocation = atan2d(centre(:,:,2) - points(1,1,2), centre(:,:,3) - points(1,1,3));
 
 %% Calculate normals of each panel
@@ -191,11 +191,11 @@ if viscous && quad
     triangle.Area = triArea;    
     partStruct.Triangle = triangle;
 end
-
+    
 yzPos = norm(:,:,3) > 0;
 
 partStruct.ID = ID;
-partStruct.TriID = triID;
+partStruct.TriID = triID;    
 partStruct.Points = points;
 partStruct.centre = centre;
 partStruct.norm = norm;

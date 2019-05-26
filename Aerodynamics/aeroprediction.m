@@ -57,8 +57,7 @@ for i=1:runs
     Pinf = run.Pinf;
     rho = run.rho;
     
-    Uvec = run.U;
-    Unorm = Uvec/Uinf;
+    Unorm = run.U./Uinf;
     
     xyAngle = run.planeAngles(1);
     xzAngle = run.planeAngles(2);
@@ -108,19 +107,11 @@ for i=1:runs
     
     %% Streamline/Friction calculation
     if viscous
-        %         if partProp.Name == "nose"
-        %             rot = (alpha*pi/180) + partProp.Rotation;
-        %         else
-        %             rot = 0;
-        %         end
         
         streamline = streamlineslow(fricData, run);
-        %         fricData = cornervelocities(fricData, run);
-        
-        %         intstreamline(fricData,run);
-        
+
         % Independent of AoA
-%         Cdf = simplefriction(properties,partType,parameters,run);
+        % Cdf = simplefriction(properties,partType,parameters,run);
         Cdf = friction(points,bodyPart,Aref,run);
     else
         Cdf = 0;

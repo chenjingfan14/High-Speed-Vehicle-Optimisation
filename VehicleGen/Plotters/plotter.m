@@ -106,6 +106,7 @@ for ii=1:nPoints
             end
             fill3(x(i,:),y(i,:),z(i,:),colour);%,'EdgeColor','none')
         end
+        
     elseif any(plotDefs == "wire")
         
         h = mesh(x,y,z,'edgecolor','k');
@@ -151,6 +152,7 @@ for ii=1:nPoints
         else
             h = surf(x,y,z,'LineWidth',0.05);
         end
+        
         if any(plotDefs == "nolines")
             
             set(h,'FaceColor',colour,'FaceLighting','flat','EdgeColor','none');

@@ -226,7 +226,12 @@ for i=1:numAerofoils
     bodyUpper(end,:,1) = xBody(end);
     bodyLower(end,:,1) = xBody(end);
     
-    aftBody.Points = {bodyUpper,bodyLower};
+    if i == 1
+        
+        aftBody.Points = {bodyUpper,bodyLower};
+    else
+        error('No set up for more than one aerofoil')
+    end
     
     % Wing first and last point sets now replaced with upper and lower
     % bridge points found above

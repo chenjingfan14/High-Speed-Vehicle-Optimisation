@@ -1,6 +1,9 @@
 function streamline = streamlineslow(partCell,flow)
 
-Vinf = flow.U;
+%% TODO: Make all of this triangular based
+
+Uinf = flow.U;
+Unorm = Uinf./flow.Uinf;
 model = 'barycentrictrimodel';
 [timestep,newTimestep] = deal(0.001);
 
@@ -10,7 +13,7 @@ for ii = numel(partCell):-1:1
     L = part.L;
     
     close all
-    plotter(part,"triangle")
+    plotter(part,"triangle","centre")
     
     if isfield(part,'Triangle')
        
@@ -42,6 +45,13 @@ for ii = numel(partCell):-1:1
     % Plane equation
     d = nxTri .* cxTri + nyTri .* cyTri + nzTri .* czTri;
     
+    % Inlincation to flow
+    del = asin((-Unorm(1) .* nxTri) +...
+        (-Unorm(2) .* nyTri) +...
+        (-Unorm(3) .* nzTri));
+    
+    impact = del > 0;
+    
     %%
     % Creating x,y point matrices from 0 to [x y]-1
     % Number of points
@@ -59,17 +69,30 @@ for ii = numel(partCell):-1:1
     
     %% Centre point velocities
     
-    T = crossmat(norm, permute(Vinf,[3 1 2]));
+    T = crossmat(norm, permute(Uinf,[3 1 2]));
     Vcentre = crossmat(T, norm);
     
     % Translate to corner velocity
     Vcorner = L * Vcentre(:);
     Vc = reshape(Vcorner,size(part.Points));
     
+    % Quad corner point velocity
     Vx = Vc(:,:,1);
     Vy = Vc(:,:,2);
     Vz = Vc(:,:,3);
-
+    
+    % Tri corner point velocity       
+    VxTri = Vx(triID);
+    VyTri = Vy(triID);
+    VzTri = Vz(triID);
+    
+    VcTri = [mean(VxTri,2) mean(VyTri,2) mean(VzTri,2)];
+    
+    V = reshape(VcTri,size(triangle.centre));
+%     Vx = reshape(Vx,size(cxTri));
+%     Vy = reshape(Vy,size(cyTri));
+%     Vz = reshape(Vz,size(czTri));
+    
     falseMat = false(dim,1);
     
     [IDArray,todo] = deal((1:dim)');
@@ -78,7 +101,11 @@ for ii = numel(partCell):-1:1
     IDmat(:) = 1:numel(nxTri);
 
     begin = nan(streamCols,1);
-    begin(1:cols) = IDmat(1,:);   
+%     begin(1:cols) = IDmat(1,:);
+%     inject = findinjectionsvelocity(V(:,:,3),IDmat,nzTri,impact);
+    inject = findinjectionsinclination(del,IDmat,nzTri,impact);
+    begin(1:length(inject)) = inject;
+    
     TE = IDmat(end,:);
     
     i = 1;
@@ -91,6 +118,8 @@ for ii = numel(partCell):-1:1
         rowTri = triID(ID,:);
         
         p1 = squeeze([cxTri(ID); cyTri(ID); czTri(ID)]);
+        
+        %% VP1 NOT MATCHING WITH VCTRI
         Vp1 = mean([Vx(rowTri); Vy(rowTri); Vz(rowTri)],2);
         
         streamCoords(1,count,1) = p1(1);
@@ -100,7 +129,7 @@ for ii = numel(partCell):-1:1
         tID = 0;
         j = 1;
         stop = false;
-        switched = false;
+        switched = 0;
         cross = true;
         [prevCross,saveCross] = deal([]);
         streamID = nanStreamIDs;
@@ -147,7 +176,23 @@ for ii = numel(partCell):-1:1
                 cDiff = (diff21 + diff31)/2;
                 
 %                 zmajor = (abs(Vp1(3)) >= abs(Vp1(2)) & nyi ~= 0) | nzi == 0;
-                zmajor = (abs(cDiff(3)) >= abs(cDiff(2)) & nyi ~= 0) | nzi == 0;
+%                 zmajor = (abs(cDiff(3)) >= abs(cDiff(2)) & nyi ~= 0) | nzi == 0;
+                [~,Vexclude] = min(abs(cDiff));
+                
+                switch Vexclude
+                    
+                    case 1
+                        
+                        p_2D = [c([2 3],:); V([2 3],:)];
+                        
+                    case 2
+                        
+                        p_2D = [c([1 3],:); V([1 3],:)];
+                        
+                    case 3
+                        
+                        p_2D = [c([1 2],:); V([1 2],:)];
+                end
                 
                 streamID(j) = ID;
                 stream(j,:) = p1;
@@ -155,24 +200,22 @@ for ii = numel(partCell):-1:1
                 noCross = 0;
             end
             
-            if zmajor
+            switch Vexclude
                 
-                if cross
+                case 1
+
+                    pt_2D = p1([2 3]);
+                    Vpt_2D = Vp1([2 3]);
                     
-                    p_2D = [c([1 3],:); V([1 3],:)];
-                end
+                case 2
                 
-                pt_2D = p1([1 3]);
-                Vpt_2D = Vp1([1 3]);
-            else
-                
-                if cross
+                    pt_2D = p1([1 3]);
+                    Vpt_2D = Vp1([1 3]);
+                  
+                case 3
                     
-                    p_2D = [c([1 2],:); V([1 2],:)];
-                end
-                
-                pt_2D = p1([1 2]);
-                Vpt_2D = Vp1([1 2]);
+                    pt_2D = p1([1 2]);
+                    Vpt_2D = Vp1([1 2]);   
             end
             
             % RK4 integration
@@ -201,21 +244,34 @@ for ii = numel(partCell):-1:1
             pt_2D = pt_2D + delta([1 2]);
             Vpt_2D = Vpt_2D + delta([3 4]);
             
-            if zmajor
+            switch Vexclude
                 
-                xp2 = pt_2D(1);
-                zp2 = pt_2D(2);
-                
-                yp2 = (d0 - nxi * xp2 - nzi * zp2)/nyi;
-                
-                Vp2 = [Vpt_2D(1) Vp1(2) Vpt_2D(2)]';                 
-            else
-                xp2 = pt_2D(1);
-                yp2 = pt_2D(2);
-                
-                zp2 = (d0 - nxi * xp2 - nyi * yp2)/nzi;
-                
-                Vp2 = [Vpt_2D([1 2]); Vp1(3)]; 
+                case 1
+                    
+                    yp2 = pt_2D(1);
+                    zp2 = pt_2D(2);
+                    
+                    xp2 = (d0 - nyi * yp2 - nzi * zp2)/nxi;
+                    
+                    Vp2 = [Vp1(1); Vpt_2D];
+                    
+                case 2
+                    
+                    xp2 = pt_2D(1);
+                    zp2 = pt_2D(2);
+                    
+                    yp2 = (d0 - nxi * xp2 - nzi * zp2)/nyi;
+                    
+                    Vp2 = [Vpt_2D(1) Vp1(2) Vpt_2D(2)]';
+                    
+                case 3
+            
+                    xp2 = pt_2D(1);
+                    yp2 = pt_2D(2);
+                    
+                    zp2 = (d0 - nxi * xp2 - nyi * yp2)/nzi;
+                    
+                    Vp2 = [Vpt_2D; Vp1(3)];
             end
             
             %% Crossings
@@ -259,7 +315,7 @@ for ii = numel(partCell):-1:1
             
             if cross
                 
-                switched = false;
+                switched = 0;
                 
                 if cross1 && cross2
                     
@@ -295,10 +351,16 @@ for ii = numel(partCell):-1:1
                 within = iswithintriangle(p2,c);
                 if ~within
                     
-                    if ~switched
+                    if switched < 2
                         
-                        zmajor = ~zmajor;
-                        switched = true;
+                        Vexclude = Vexclude + 1;
+                        
+                        if Vexclude > 3
+                            
+                            Vexclude = 1;
+                        end
+                        
+                        switched = switched + 1;
                         continue
                     else
                         con = todo == ID;
@@ -318,12 +380,12 @@ for ii = numel(partCell):-1:1
             end
             
             %% Plotting every timestep
-%             figure(gcf)
-%             hold on
-%             plot3([p1(1) p2(1)],[p1(2) p2(2)],[p1(3) p2(3)],'r')
+            figure(gcf)
+            hold on
+            plot3([p1(1) p2(1)],[p1(2) p2(2)],[p1(3) p2(3)],'r')
 %             plot3([p1(1) p2(1)],[p1(2) p2(2)],[p1(3) p2(3)],'b*')
 %             plot3(cxTri(ID),cyTri(ID),czTri(ID),'b*')
-%             hold off
+            hold off
             
             pdiff = ((xp2-xp1).^2 + (yp2-yp1).^2 + (zp2-zp1).^2).^0.5;
             
@@ -354,41 +416,7 @@ for ii = numel(partCell):-1:1
         delete = isnan(streamID);
         streamID(delete) = [];
         
-        % Find IDs that already exist in streamline matrix
-%         con = ismember(streamID,streamIDs);
-        
         leng = length(streamID);
-        
-%         % Terminating panel always remains in todo as it hasn't expanded
-%         % into another panel
-%         con(leng) = false;
-%         revised = false(leng,1);
-%         
-%         if rem(leng,2)
-%             
-%             sepStreams = nan(leng,(leng+1)/2);
-%         else
-%             sepStreams = nan(leng,leng/2);
-%         end
-%         
-%         for I = 1:leng-1
-%             
-%             if con(I) && con(I+1)
-%                 % If sequence is repeat of one already tracked, expansion
-%                 % already exists, remove initial panel
-%                 revised(I) = true;
-%                 
-%             elseif con(I) && ~con(I+1) && ismember(streamID(con(I)),todo)
-%                 % If sequence hasn't been tracked, AND panel expanding into
-%                 % not yet tracked panel has not expanded into a panel
-%                 % already, keep and remove from todo
-%                 true
-%                 
-%             else
-%                 
-%                 
-%             end
-%         end
         
         if leng == 1
             
@@ -432,7 +460,7 @@ for ii = numel(partCell):-1:1
         
         i = i + 1;
         
-        if i > cols && ~isempty(todo)
+        if i > length(inject) && ~isempty(todo)
             
             begin(i) = todo(1);
         end

@@ -120,6 +120,10 @@ for i=wingDim:-1:1
     % Ensure initial semispan is larger than maximum body radius
     minFirstSemispan = max([aftbodyHeight,aftbodyWidth]/2);
     
+    % Stop semispan getting too large, shouldn't need to be larger than
+    % maximum body radius
+    maxFirstSemispan = max(aftbodyHeight,aftbodyWidth)*2;
+    
     if semispan(1) < minFirstSemispan
         
         [semispan(1),parSemispan(1)] = deal(minFirstSemispan);
@@ -153,10 +157,6 @@ for i=wingDim:-1:1
         
         % Join body and aerofoil together
         [liftSurface,aftbody,success,reason] = bodyfoil(aftbody,liftSurface,[xOffset,zOffset]);
-        
-        % Stop semispan getting too large, shouldn't need to be larger than
-        % maximum body radius
-        maxFirstSemispan = max(aftbody.Height,aftbody.Width)*2;
         
         %% If unsuccessful, while loop to fix until it is successful
         % Reason 1: Wing fore of body (increase x offset)

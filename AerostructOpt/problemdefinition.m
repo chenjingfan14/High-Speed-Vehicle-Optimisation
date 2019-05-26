@@ -13,23 +13,57 @@ addpath(genpath('Aerodynamics'))
 addpath(genpath('Structures'))
 addpath(genpath('Functions'))
 
-%%
+%% Simulation options
+
+% "PSO" or "GA"
+method = "PSO";
+
 % Number of processors to be used (up to 4 on desktop)
 nProc = 1;
 costFun = @particlecreator; % Cost function caller
 
-%% Simulation options
-
 % Number of cost functions
 nFun = 2;
 
-%% Include what in optimisation
+% If opt cost function value = max(f(x)) (rather than min) then can use
+% this to invert CF values for display purposes
+options.Inv = false(1,nFun);
+% options.Neg = false(1,nFun);
+
+options.Neg = logical([1 0]);
+
+options.CostFunctions = nFun;
+options.CostFunctionLabels = {'C_L','C_D'};
+
+% Tolerance required to end optimisation (single-objective only)
+options.Tolerance = 0;
+
+%% Optimisation inclusions and methods
 options.Wing = true;
 options.Aft = true;
 options.Fore = true;
 options.Nose = true;
 options.Control = false;
 options.Quad = false;
+
+% Prediction method mixer:
+    % Impact:   1 - Modified Newtonian
+    %           2 - Modified Newtonian + Prandtl-Meyer
+    %           3 - Oblique Shock + Prandtl-Meyer
+    %           4 - Tangent Wedge/Cone
+    % Shadow:   1 - Newtonian/Base Pressure
+    %           2 - Prandtl-Meyer
+    %
+    % Bodypart: whether or not part should be treated as body (true) or
+    % lifting surface
+aeroMethod = {["aerofoil","wing","tail","aerofoil l","aerofoil u"], 3,  2,  false;
+               "aftbody",                                           3,  2,  true;
+               "forebody",                                          3,  2,  true;
+               "nose",                                              3,  2,  true;
+               "test",                                              3,  2,  true;
+               "default",                                           3,  2,  true};
+
+options.AeroMethod = aeroMethod;
 
 % Aerofoil creation method: PARSEC, Bezier, BP3434, Preloaded
 aerofoilMethod = "BezierTC";
@@ -43,53 +77,8 @@ n = 2;
 % Chordwise wing discretisation
 xPanels = 20;
 discMethod = "Cosine";
-
-X = (0:xPanels)';
-
-switch discMethod
-    
-    case "Linear"
-        
-        chordDisc = X/max(X);
-        
-    case "Cosine"
-        
-        chordDisc = 0.5*(1-cos((X*pi)/max(X)));
-        
-    case "HalfCosine"
-        
-        chordDisc = 1-cos((X*(pi/2))/max(X));
-end
-
-%% Flow parameters
-
-flow.Alpha = (-4:4:24)';
-flow.Alpha = (-4:20)';
-% flow.Alpha = (-4:0.2:28)';
-% flow.Alpha = [22.8 23.3];
-flow.Delta = 0;
-flow.Control = options.Control;
-
-% Nose-body Mach 4.63
-% flow.Mach = 4.63;
-% flow.Altitude = 32850;
-
-% X-34 Mach 6
-flow.Mach = 6;
-flow.Altitude = 27975;
-
-% X-34 Mach 3 (2?)
-% flow.Mach = 2;
-% flow.Altitude = 20000;
-% flow.Altitude = 13530;
-
-flow = flowparameters(flow);
-
-%%
-
-options.Tolerance = 0;
-
-% Use hard coded transforms (required for cluster), else uses versatile
+          
+% Use hard coded transforms (required for cluster), or versatile
 % (sym engine required) transform function
 options.HardTransform = true;
 
@@ -100,38 +89,51 @@ options.Structure = false;
 options.Shielding = false;
 
 % Include viscous effects in aerodynamic prediction
-options.Viscous = true;
+options.Viscous = false;
+
 % "Euclids Hat" "Wendlands" "Thin Plate Spline". Default is Volume Spline
 rbfmethod = "Wendlands";
-
-% % Include control surfaces as design variables
-% options.Control = control;
 
 % Initial baseline configuration to be analysed and used as reference
 options.Baseline = true;
 
-% Running simulation on computing cluster (ie. Buckethead)?
-options.Cluster = false;
+%% Flow parameters
 
-%%
+flow.Alpha = (-4:4:24)';
+% flow.Alpha = [22.8 23.3];
+flow.Delta = 0;
+flow.Control = options.Control;
 
-options.CostFunctions = nFun;
+% Nose-body Mach 4.63
+% flow.Mach = 4.63;
+% flow.Altitude = 32850;
 
-% If opt cost function value = max(f(x)) (rather than min) then can use
-% this to invert CF values for display purposes
-options.Inv = false(1,nFun);
-options.Neg = false(1,nFun);
+% X-34 Mach 6
+% flow.Mach = 6;
+% flow.Altitude = 27975;
 
-options.Neg = logical([1 0]);
+% X-34 Mach 3 (2?)
+flow.Mach = 2;
+flow.Altitude = 20000;
+flow.Altitude = 13530;
 
-options.CostFunctionLabels = {'C_L','C_D'};
+flow = flowparameters(flow);
+
+
+%% Creating simulation parameters based on chosen options
 
 % If number of processors has been entered and if that value is > 1, create
 % parallel loop
 if exist('nProc','var') && nProc > 1
     
-    parallel = true;
+    options.Parallel = true;
     
+    % Turn on when running on cluster to avoid graphical output
+    if nProc > 4
+    
+        options.Cluster = true;
+    end
+        
     pool = gcp('nocreate');
 
     if isempty(pool)
@@ -139,26 +141,7 @@ if exist('nProc','var') && nProc > 1
     end
     
 else % Running on one processor
-    parallel = false;
-end
-
-options.Parallel = parallel;
-
-if options.Wing
-    
-    options.WingPartitions = n;
-    options.AerofoilMethod = aerofoilMethod;
-end
-
-if contains(aerofoilMethod,'Bezier')
-    
-    options.BezierControlPoints = BezierControlPoints;
-end
-
-% Failsafe incase forget to change above when running on cluster
-if exist('nProc','var') && nProc > 4
-    
-    options.Cluster = true;
+    options.Parallel = false;
 end
 
 if options.Structure
@@ -174,37 +157,51 @@ if options.Viscous
 end
 
 %% Initialise optimisation variables
-wing = options.Wing;
 aft = options.Aft;
 fore = options.Fore;
 nose = options.Nose;
-control = options.Control;
-
-baseline = options.Baseline;
-cluster = options.Cluster;
 
 % Load lookup tables for shock-expansion and Prandtl Meyer expansion
-Mrange = [1:0.0001:10,10.1:0.1:100];
-options.PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
+% Mrange = [1:0.0001:10,10.1:0.1:100];
+% options.PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
+options.PrandtlMeyer = [];
 
 % Can insert own (Mrange,betaRange) vals into function
 [options.ThetaBetaM, options.MaxThetaBetaM] = thetabetamachcurves();
 
 options.pmFun = @(M1,gamma) ((gamma + 1)/(gamma - 1)).^0.5 * atan((((gamma - 1)/(gamma + 1)).*(M1.^2 - 1)).^0.5) - atan(((M1.^2) - 1).^0.5);
 
-% Cell containing variable names and their subsequent conditions to be
-% applied, so far these conditions are as follows:
-% minimum value (mini) - if value is below those thresholds, set to zero
-% floor - round value down to nearest integer
-% if all - if any values = 0, set all to zero
-
-
-
 %% Part Definitions
 variCons = {...
     "Variables", "VarMin", "VarMax", "Conditions", "Transformations", "Optimise/Hold"};
 
-if wing
+if options.Wing
+    
+    X = (0:xPanels)';
+    
+    switch discMethod
+
+        case "Linear"
+
+            chordDisc = X/max(X);
+
+        case "Cosine"
+
+            chordDisc = 0.5*(1-cos((X*pi)/max(X)));
+
+        case "HalfCosine"
+
+            chordDisc = 1-cos((X*(pi/2))/max(X));
+    end
+    
+    if contains(aerofoilMethod,'Bezier')
+        
+        options.BezierControlPoints = BezierControlPoints;
+    end
+    
+    options.WingPartitions = n;
+    options.AerofoilMethod = aerofoilMethod;
+    options.ChordDisc = chordDisc;
     
     wingDefs = define_wing(options);
     [foilDefs,options] = define_aerofoil(options);
@@ -220,20 +217,19 @@ if any([aft,fore,nose])
     variCons = [variCons; bodyDefs];    
 end
 
-if control
+if options.Control
     
     controlDefs = define_control();
     variCons = [variCons; controlDefs];
 end
 
 options.Flow = flow;
-options.ChordDisc = chordDisc;
 
 %% Baseline
 
 % If there is a baseline configuration to be bettered, create here and
 % provide baseline parameters/characteristics
-if baseline
+if options.Baseline
     
     options.Base = baselinefun(variCons,options);
 end
