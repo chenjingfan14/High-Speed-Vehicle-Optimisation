@@ -100,7 +100,7 @@ options.Baseline = true;
 %% Flow parameters
 
 flow.Alpha = (-4:4:24)';
-% flow.Alpha = [22.8 23.3];
+flow.Alpha = [22.8 23.3]';
 flow.Delta = 0;
 flow.Control = options.Control;
 
@@ -164,10 +164,10 @@ nose = options.Nose;
 % Load lookup tables for shock-expansion and Prandtl Meyer expansion
 % Mrange = [1:0.0001:10,10.1:0.1:100];
 % options.PrandtlMeyer = prandtlmeyerlookup(Mrange,flow);
-options.PrandtlMeyer = [];
+% options.PrandtlMeyer = [];
 
 % Can insert own (Mrange,betaRange) vals into function
-[options.ThetaBetaM, options.MaxThetaBetaM] = thetabetamachcurves();
+[~, options.MaxThetaBetaM] = thetabetamachcurves();
 
 options.pmFun = @(M1,gamma) ((gamma + 1)/(gamma - 1)).^0.5 * atan((((gamma - 1)/(gamma + 1)).*(M1.^2 - 1)).^0.5) - atan(((M1.^2) - 1).^0.5);
 

@@ -99,12 +99,19 @@ for ii = numel(partCell):-1:1
     
     IDmat = zeros(rows,cols);
     IDmat(:) = 1:numel(nxTri);
-
+    IDmat(~impact) = 0;
+    
     begin = nan(streamCols,1);
 %     begin(1:cols) = IDmat(1,:);
-%     inject = findinjectionsvelocity(V(:,:,3),IDmat,nzTri,impact);
-    inject = findinjectionsinclination(del,IDmat,nzTri,impact);
+
+    VzInject = V(:,:,3);
+    VzInject(~impact) = nan;
+
+    inject = findinjectionsvelocity(VzInject,IDmat,nzTri);
+%     inject = findinjectionsinclination(del,IDmat,false,1);
     begin(1:length(inject)) = inject;
+    
+    done = ~impact;
     
     TE = IDmat(end,:);
     
@@ -113,7 +120,7 @@ for ii = numel(partCell):-1:1
     maxRow = 0;
     
     while ~isempty(todo)
-
+        
         ID = begin(i);
         rowTri = triID(ID,:);
         
@@ -179,40 +186,34 @@ for ii = numel(partCell):-1:1
 %                 zmajor = (abs(cDiff(3)) >= abs(cDiff(2)) & nyi ~= 0) | nzi == 0;
                 [~,Vexclude] = min(abs(cDiff));
                 
-                switch Vexclude
-                    
-                    case 1
-                        
-                        p_2D = [c([2 3],:); V([2 3],:)];
-                        
-                    case 2
-                        
-                        p_2D = [c([1 3],:); V([1 3],:)];
-                        
-                    case 3
-                        
-                        p_2D = [c([1 2],:); V([1 2],:)];
-                end
-                
                 streamID(j) = ID;
                 stream(j,:) = p1;
                 j = j + 1;
                 noCross = 0;
             end
             
+            % Define corners/particle points and velocities by two major
+            % dimensions. Corner points must be defined here, not within
+            % cross, as switching dimesions will also alter this variable
             switch Vexclude
                 
                 case 1
 
+                    p_2D = [c([2 3],:); V([2 3],:)];
+                    
                     pt_2D = p1([2 3]);
                     Vpt_2D = Vp1([2 3]);
                     
                 case 2
                 
+                    p_2D = [c([1 3],:); V([1 3],:)];
+                    
                     pt_2D = p1([1 3]);
                     Vpt_2D = Vp1([1 3]);
                   
                 case 3
+                    
+                    p_2D = [c([1 2],:); V([1 2],:)];
                     
                     pt_2D = p1([1 2]);
                     Vpt_2D = Vp1([1 2]);   
@@ -380,12 +381,12 @@ for ii = numel(partCell):-1:1
             end
             
             %% Plotting every timestep
-            figure(gcf)
-            hold on
-            plot3([p1(1) p2(1)],[p1(2) p2(2)],[p1(3) p2(3)],'r')
+%             figure(gcf)
+%             hold on
+%             plot3([p1(1) p2(1)],[p1(2) p2(2)],[p1(3) p2(3)],'r')
 %             plot3([p1(1) p2(1)],[p1(2) p2(2)],[p1(3) p2(3)],'b*')
 %             plot3(cxTri(ID),cyTri(ID),czTri(ID),'b*')
-            hold off
+%             hold off
             
             pdiff = ((xp2-xp1).^2 + (yp2-yp1).^2 + (zp2-zp1).^2).^0.5;
             
@@ -460,16 +461,16 @@ for ii = numel(partCell):-1:1
         
         i = i + 1;
         
-        if i > length(inject) && ~isempty(todo)
+        if i > length(inject) && any(todo)
             
             begin(i) = todo(1);
         end
     end
     
-    figure(gcf)
-    hold on
-    plot3(streams(:,:,1),streams(:,:,2),streams(:,:,3),'b')
-    hold off
+%     figure(gcf)
+%     hold on
+%     plot3(streams(:,:,1),streams(:,:,2),streams(:,:,3),'b')
+%     hold off
     
     rowArray = 1:maxRow;
     colArray = 1:count-1;

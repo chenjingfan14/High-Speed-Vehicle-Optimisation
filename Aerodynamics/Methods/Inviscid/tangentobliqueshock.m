@@ -1,25 +1,29 @@
-function [Cp,Mach,P] = tangentobliqueshock(theta,flow,iThetaBetaM,maxiThetaBetaM,conical)
+function [Cp,Mach,P,method] = tangentobliqueshock(del,ID,method,flow,maxThetaBetaM,conical)
 
-alpha = flow.alpha; Minf = flow.Minf; gamma = flow.gamma; Pinf = flow.Pinf;
+M1 = flow.Minf;
+gamma = flow.gamma;
+Pinf = flow.Pinf;
 
-dummy = zeros(size(theta));
+[Cp,Mach,P] = deal(zeros(size(del)));
 
-Cp = dummy;
-Mach = dummy;
-P = dummy;
+target = tan(del);
 
-[~,dim2] = size(iThetaBetaM);
-dim2 = dim2-1;
-colArray = 1:dim2;
-idCol = Minf == iThetaBetaM(1,:);
-idCol = colArray(idCol);
+ub = halfspace(M1,maxThetaBetaM(:,1),maxThetaBetaM(:,3));
+
+tbm = @(B,M1,gamma) 2*cot(B) .* ((M1.^2) .* (sin(B).^2) - 1)./((M1.^2) .* (gamma + cos(2*B)) + 2);
+tbmbi = @(B) tbm(B,M1,gamma);
+
+[beta, ~, flag] = bisection(tbmbi,0,ub,target(:));
 
 % All panel inclinations to flow for attached shock must be less than
 % maximum allowable otherwise switch infringing panels to newtonian flow
-con = theta <= maxiThetaBetaM(idCol,2);
+con = ~isnan(beta);
 
-thetaO = theta(con);
-thetaN = theta(~con);
+beta = beta(con);
+
+thetaO = del(con);
+thetaN = del(~con);
+
 M = zeros(sum(con),1);
 
 if conical
@@ -28,44 +32,31 @@ if conical
     % Mix between On hypersonic flow past unyawed cone & Approximate
     % solutions for supersonic flow over wedges and cones
 
-    tau = asin(sin(thetaO) .* (((gamma+1)/2) + (1./((Minf*sin(thetaO)).^2))).^0.5);
+    tau = asin(sin(thetaO) .* (((gamma+1)/2) + (1./((M1*sin(thetaO)).^2))).^0.5);
 
-%     numer = (Minf^2) .* (cos(tau).^2) .* (1+2*(tau-theta));
-%     denom = 1 + ((gamma-1)/2) * (Minf^2) * ((sin(tau).^2) - 2*((tau-theta).^2) .* (cos(theta).^2));
-%     
-%     M = (numer./denom).^0.5;
+    % numer = (Minf^2) .* (cos(tau).^2) .* (1+2*(tau-theta));
+    % denom = 1 + ((gamma-1)/2) * (Minf^2) * ((sin(tau).^2) - 2*((tau-theta).^2) .* (cos(theta).^2));
+    % M = (numer./denom).^0.5;
     
     % Exact Taylor-Maccoll solution?
     for i = 1:length(tau)
-        [~,M(i),~] = solvecone(tau(i),Minf,gamma);
+        
+        [~,M(i),~] = solvecone(tau(i),M1,gamma);
     end
     
     Mach(con) = M;
     
-    frac1 = ((gamma+1) * ((Minf * sin(thetaO)).^2) + 2)./((gamma-1) * ((Minf * sin(thetaO)).^2) + 2);
-    frac2 = ((gamma+1)/2) + 1./((Minf * sin(thetaO)).^2);
+    frac1 = ((gamma+1) * ((M1 * sin(thetaO)).^2) + 2)./((gamma-1) * ((M1 * sin(thetaO)).^2) + 2);
+    frac2 = ((gamma+1)/2) + 1./((M1 * sin(thetaO)).^2);
     
     Cp(con) = (thetaO.^2) .* (1 + (frac1 .* log(frac2)));
-    Pratio = (2*gamma * Minf.^2 * (sin(tau).^2) - (gamma-1))/(gamma+1);
+    Pratio = (2*gamma * M1.^2 * (sin(tau).^2) - (gamma-1))/(gamma+1);
     
 else
     % Fundamentals of Aerodynamics, Anderson 2001 & Development of an
     % Aerodynamics Code for the Optimisation of Hypersonic Vehicles Jazra
     % & Smart 2009
-    % 2:end to remove initial Mach number row
-    iThetaBetaMvec = iThetaBetaM(2:end,[1 idCol]);
-
-    % Only keep values greater than 0 and below max theta (ie. 
-    TBMcon = iThetaBetaMvec(:,2) > 0 & iThetaBetaMvec(:,1) <= maxiThetaBetaM(idCol,3);
-
-    iThetaBetaMvec = iThetaBetaMvec(TBMcon,:);
-
-    absdiff = abs(theta(con)' - iThetaBetaMvec(:,2));
-    [~,rows] = min(absdiff,[],1);
-
-    beta = iThetaBetaMvec(rows,1);
-    
-    Mn1 = Minf*sin(beta);
+    Mn1 = M1*sin(beta);
     
     numer = 1+((gamma-1)/2) * Mn1.^2;
     denom = gamma * (Mn1.^2) - (gamma-1)/2;
@@ -75,11 +66,14 @@ else
     Pratio = 1 + ((2*gamma)/(gamma+1)) * ((Mn1.^2) - 1);
     
     % Assumed equation
-    Cp(con) = (1/(0.5*gamma*(Minf^2))) * (Pratio-1);
+    Cp(con) = (1/(0.5*gamma*(M1^2))) * (Pratio-1);
 end
 
 P(con) = Pratio*Pinf;
+method(ID(con)) = 4;
 
-if ~isempty(thetaN)
+if any(~con)
+    
     [Cp(~con),Mach(~con),P(~con)] = newtonian(thetaN,flow);
+    method(ID(~con)) = 1;
 end

@@ -40,9 +40,7 @@ viscous = options.Viscous;
 control = options.Control;
 structures = options.Structure;
 
-thetaBetaM = options.ThetaBetaM;
 maxThetaBetaM = options.MaxThetaBetaM;
-PrandtlMeyer = options.PrandtlMeyer;
 
 for i=1:runs
     %% Outer flight state loop
@@ -62,13 +60,6 @@ for i=1:runs
     xyAngle = run.planeAngles(1);
     xzAngle = run.planeAngles(2);
     yzAngle = run.planeAngles(3);
-    
-    if i == 1 || Minf ~= MinfPrev
-        % Find maximum compression angle for which attached shock solution exists
-        % for free stream Mach number
-        loc = Minf == options.MaxThetaBetaM(:,1);
-        maxThetaInf = options.MaxThetaBetaM(loc,2);
-    end
     
     if viscous && (i == 1 || alpha ~= alphaPrev)
         
@@ -153,6 +144,8 @@ for i=1:runs
             unitNorm = part.unitNorm;
             centre = part.centre;
             
+            method = zeros(size(ID));
+            
             del = asin((-Unorm(1) .* unitNorm(:,:,1)) +...
                 (-Unorm(2) .* unitNorm(:,:,2)) +...
                 (-Unorm(3) .* unitNorm(:,:,3)));
@@ -192,16 +185,8 @@ for i=1:runs
             % Centre y,z coordinates of each panel
             zeroArea = area <= 0;
             
-%             logicalFlow = rotPoints(j).flow;
             logicalFlow = del > 0;            
             points(j).flow = logicalFlow;
-            
-%             nx = unitNorm(:,:,1);
-%             
-%             logicalFlow = false(row,col);
-%             logicalFlow(zPos) = nx(zPos) < -impactNx;
-%             logicalFlow(~zPos) = nx(~zPos) < impactNx;
-%             points(j).flow = logicalFlow;
             
             if shielding
                 
@@ -212,54 +197,33 @@ for i=1:runs
             else
                 impact = logicalFlow & ~zeroArea;
                 shadow = ~logicalFlow & ~zeroArea;
-                
-                impact = del > 0 & ~zeroArea;
-                shadow = del <= 0 & ~zeroArea;
             end
             
             %% Impact solver
             if any(impact(:))
                 
-                impactdel = del(impact);
-                iMethod = impactMethod(j);
-                
-                % If using oblique shock/tangent method, initial inclination to
-                % flow for attached shock must be less than maximum allowable
-                % (assuming front is bluntest part of part for tangent wedge/
-                % cone method), otherwise switch to Newtonian Prandtl-Meyer
-%                 if iMethod == 4 && any(abs(del(:)) > maxThetaInf)
-%                     
-%                     iMethod = 3;
-%                 end
-%                 
-%                 meandel = mean(abs(del(1,:)));
-%                 
-%                 if iMethod == 3 && any(meandel > maxThetaInf)
-%                     
-%                     iMethod = 2;
-%                 end
-%                 
-%                 meandel = meandel*180/pi;
-                
-                switch iMethod
+                switch impactMethod(j)
                     case 1 % Modified Newtonian
                         
-                        [impactCp,impactMach,impactP] = newtonian(impactdel,run);
+                        [impactCp,impactMach,impactP] = newtonian(del(impact),method,run);
+                        method(impact) = 1;
                         
                     case 2 % Modified Newtonian + Prandtl-Meyer expansion
-                        
-                        [impactCp,impactMach,impactP] = newtonianprandtlmeyer(partProp,del,impact,meandel,Cp,Mach,P,run,PrandtlMeyer,thetaBetaM,maxThetaBetaM,conical);
+                                                                                    
+                        [impactCp,impactMach,impactP,method] = newtonianprandtlmeyer(ID,streamline.ID,del,prev,impact,method,Cp,Mach,P,run,options.pmFun,maxThetaBetaM);
                         
                     case 3 % Oblique shock + Prandtl-Meyer expansion
                         
-%                         [impactCp,impactMach,impactP] = obliqueshockprandtl(ID,streamline.ID,del,impact,area,prev,Cp,Mach,P,run,options.pmFun,maxThetaBetaM);
-                        [impactCp,impactMach,impactP] = obliqueshock(del(impact),run,maxThetaBetaM);
+                        [impactCp,impactMach,impactP,method] = obliqueshockprandtl(ID,streamline.ID,del,impact,method,prev,Cp,Mach,P,run,options.pmFun,maxThetaBetaM);
+                        % [impactCp,impactMach,impactP,method] = obliqueshock(del(impact),ID(impact),method,run,maxThetaBetaM);
                         
                     case 4 % Tangent wedge/cone
                         
-%                         [impactCp,impactMach,impactP] = tangentobliqueshock(impactdel,run,thetaBetaM,maxThetaBetaM,conical);
-                        [impactCp,impactMach,impactP] = tangentempirical(impactdel,run,conical);
+                        [impactCp,impactMach,impactP,method] = tangentobliqueshock(del(impact),ID(impact),method,run,maxThetaBetaM,conical);
+                        % [impactCp,impactMach,impactP] = tangentempirical(impactdel,run,conical);
                 end
+                
+                points(j).ImpactMethod = method;
                 
                 if isequal(size(impactCp),size(Cp))
                     
@@ -277,45 +241,20 @@ for i=1:runs
             if any(shadow(:))
                 
                 Cpbase = basepressure(Minf,flow.gamma);
-                sMethod = shadowMethod(j);
                 
-                % Initialise shadow panel characteristics as zero arrays
-                nrow = sum(shadow(:));
-                
-                [shadowCp,shadowMach,shadowP] = deal(zeros(nrow,1));
-                
-                switch sMethod
+                switch shadowMethod(j)
                     case 1 % Newtonian/High Mach number base pressure
                         % Condition to define whether panel is a base or not,
                         % ie. if angle between it and prior panel is large, or
                         % if it has large shadow inclination
                         
-                        %% CHECK THIS
-%                         delShadow = del(shadow);
-%                         
-%                         ddel = delShadow(2:end) - delShadow(1:end-1);
-%                         
-%                         con = abs(ddel) > (45*pi/180) | abs(delShadow(2:end)) > (80*pi/180);
-%                         %%
-%                         
-%                         shadowCp(con) = - 1/(Minf^2);
-%                         shadowP(con) = 0.5*shadowCp(con)*gamma*(Minf^2) + Pinf;
-                        
-                        % Cp/Mach/P will all be zero (vacuum conditions)
-                        % All are initialised to zero thus nothing needs to be
-                        % done here
+                        % Cp(con) = Cpbase;
                         
                     case 2 % Prandtl-Meyer expansion
-                        [shadowCp,shadowMach,shadowP] = prandtlmeyer(ID,streamline.ID,del,prev,shadow,Cp,Mach,P,run,options.pmFun,maxThetaBetaM);
+                        
+                        % [shadowCp,shadowMach,shadowP] = prandtlmeyer(ID,streamline.ID,del,prev,shadow,Cp,Mach,P,run,options.pmFun,maxThetaBetaM);
+                        [Cp,Mach,P] = prandtlmeyer(ID,streamline.ID,del,prev,shadow,Cp,Mach,P,run,options.pmFun,maxThetaBetaM);                       
                 end
-                
-                Cp(shadow) = shadowCp;
-                Mach(shadow) = shadowMach;
-                P(shadow) = shadowP;
-                
-                con = del < -40*pi/180;
-                
-%                 Cp(con) = Cpbase;
             end
             
             streamline = [];
@@ -466,11 +405,11 @@ for i=1:runs
         
         partCN(j) = 2*sum(-((Cp .* area .* nz)))/Aref;
         partCA(j) = 2*sum(-((Cp .* area .* nx)))/Aref;
-        
-        MinfPrev = Minf;
-        alphaPrev = alpha;
-        deltaPrev = delta;
     end
+    
+    % MinfPrev = Minf;
+    alphaPrev = alpha;
+    deltaPrev = delta;
     
     %% Total configuration characteristics
     
@@ -535,8 +474,8 @@ trueCost(:,neg) = -cost(:,neg);
 results.Cost = trueCost;
 
 %% Save
-% addpath(genpath('Results'))
-% plotresults
+addpath(genpath('Results'))
+plotresults
 % load('BSX34')
 
 % save('validate','results','flow')

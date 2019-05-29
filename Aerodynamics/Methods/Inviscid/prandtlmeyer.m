@@ -48,6 +48,10 @@ for i = rowi
         % error('Subsonic flow (M1 < 1)')
     end
     
+    % Any undefined Mach/pressures set to freestream
+    M1(M1 == 0) = Minf;
+    P1(P1 == 0) = Pinf;
+    
     % Absolute here for first panels which may have negative inclination to
     % the flow. Otherwise should always be positive?
     vMp1 = pmFun(M1,gamma);
@@ -65,8 +69,8 @@ for i = rowi
     shock = dThetai > 1e-10;
     
     if any(shock)
-        
-        [CpShock,MachShock,PShock] = obliqueshock(dThetai(shock),flow,maxThetaBetaM,M1(shock),P1(shock));
+
+        [CpShock,MachShock,PShock] = obliqueshock(dThetai(shock),ID(id(shock)),[],flow,maxThetaBetaM,M1(shock),P1(shock));
         
         Mach(id(shock)) = MachShock;
         P(id(shock)) = PShock;
@@ -135,6 +139,6 @@ for i = rowi
 %     end
 end
 
-Cp = Cp(pm);
-Mach = Mach(pm);
-P = P(pm);
+% Cp = Cp(pm);
+% Mach = Mach(pm);
+% P = P(pm);

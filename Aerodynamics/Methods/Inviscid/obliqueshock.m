@@ -1,9 +1,9 @@
-function [Cp,Mach,P] = obliqueshock(del,flow,maxThetaBetaM,M1,P1)
+function [Cp,Mach,P,method] = obliqueshock(del,ID,method,flow,maxThetaBetaM,M1,P1)
 
 lb = 0;
 gamma = flow.gamma;
 
-if nargin == 3
+if nargin == 5
 
     M1 = flow.Minf;
     P1 = flow.Pinf;
@@ -25,6 +25,11 @@ con = isnan(Beta);
 if any(con)
     
     [Cp(con),Mach(con),P(con)] = newtonian(del(con),flow);
+    
+    if ~isempty(method)
+        
+        method(ID(con)) = 1;
+    end
 end
 
 con = ~con;
@@ -38,4 +43,9 @@ if any(con)
     Mach(con) = MachOBS(con);
     P(con) = POBS(con);
     Cp(con) = CpOBS(con);
+    
+    if ~isempty(method)
+        
+        method(ID(con)) = 3;
+    end
 end

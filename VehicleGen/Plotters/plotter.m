@@ -107,6 +107,54 @@ for ii=1:nPoints
             fill3(x(i,:),y(i,:),z(i,:),colour);%,'EdgeColor','none')
         end
         
+    elseif any(plotDefs == "Method")
+        
+        if isfield(part,'TriID')
+            
+            ID = part.TriID;
+            
+            x = x(ID);
+            y = y(ID);
+            z = z(ID);
+            
+        elseif isfield(part,'QuadID')
+            
+            ID = part.Quad;
+            
+            x = x(ID);
+            y = y(ID);
+            z = z(ID);
+        end
+        
+        [row,~] = size(x);
+        
+        for i = 1:row
+            
+            switch part.ImpactMethod(i)
+                
+                case 1
+                    
+                    colour = [1 0 0];
+                    
+                case 2
+                    
+                    colour = [0 1 0];
+                    
+                case 3
+                    
+                    colour = [1 1 0];
+                    
+                case 4
+                    
+                    colour = [255 165 0]/255;
+                    
+                otherwise
+                    
+                    colour = [0 0 1]; 
+            end
+            fill3(x(i,:),y(i,:),z(i,:),colour);%,'EdgeColor','none')
+        end
+        
     elseif any(plotDefs == "wire")
         
         h = mesh(x,y,z,'edgecolor','k');
@@ -275,7 +323,6 @@ for ii=1:nPoints
         
         title(plotDefs{which+1});
     end
-    
 end
 
 if xlim(1) == xlim(2)
